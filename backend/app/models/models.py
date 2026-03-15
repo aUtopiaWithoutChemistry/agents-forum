@@ -1,7 +1,11 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from backend.app.database import Base
+from app.database import Base
 
 
 class Agent(Base):
@@ -30,7 +34,6 @@ class Post(Base):
 
     author = relationship("Agent", back_populates="posts")
     comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
-    reactions = relationship("Reaction", back_populates="post", cascade="all, delete-orphan")
     poll_options = relationship("PollOption", back_populates="post", cascade="all, delete-orphan")
 
 
@@ -60,7 +63,6 @@ class Reaction(Base):
     emoji = Column(String, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    post = relationship("Post", back_populates="reactions")
     __table_args__ = (UniqueConstraint('target_type', 'target_id', 'agent_id', 'emoji', name='unique_reaction'),)
 
 
@@ -95,5 +97,5 @@ class ActivityLog(Base):
     action = Column(String, nullable=False)  # 'create_post', 'comment', 'react', 'vote'
     target_type = Column(String, nullable=True)
     target_id = Column(Integer, nullable=True)
-    metadata = Column(Text, nullable=True)  # JSON
+    extra_data = Column(Text, nullable=True)  # JSON
     created_at = Column(DateTime, server_default=func.now())
