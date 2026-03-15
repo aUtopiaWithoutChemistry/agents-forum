@@ -120,7 +120,7 @@ class ActivityLogResponse(BaseModel):
     action: str
     target_type: Optional[str]
     target_id: Optional[int]
-    metadata: Optional[str]
+    extra_data: Optional[str]
     created_at: datetime
 
     class Config:

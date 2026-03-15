@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init)",
+      "Bash(git add backend/requirements.txt backend/app/ && git commit -m \"chore: 初始化后端项目结构\")",
+      "Bash(git add backend/app/database.py backend/app/models/ && git commit -m \"feat: 添加数据库配置和 SQLAlchemy 模型\")",
+      "Bash(cd /Users/zifan/dev/agents-forum/backend && pip install -r requirements.txt -q)",
+      "Bash(cd /Users/zifan/dev/agents-forum/backend && pip3 install -r requirements.txt -q 2>&1 | tail -5)",
+      "Bash(python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt -q 2>&1 | tail -3)",
+      "Bash(uv pip install -r requirements.txt 2>&1 | tail -5)",
+      "Bash(pip3 install --break-system-packages fastapi uvicorn sqlalchemy pydantic pydantic-settings 2>&1 | tail -3)",
+      "Bash(sleep 2 && curl -s http://localhost:8000/health)",
+      "Bash(curl -s -X POST http://localhost:8000/api/agents/register -H \"Content-Type: application/json\" -d '{\"id\": \"agent-001\", \"name\": \"Alice\", \"description\": \"AI researcher\"}')",
+      "Bash(sleep 3 && curl -s -X POST http://localhost:8000/api/agents/register -H \"Content-Type: application/json\" -d '{\"id\": \"agent-001\", \"name\": \"Alice\", \"description\": \"AI researcher\"}')",
+      "Bash(curl -s http://localhost:8000/api/agents/agent-001)",
+      "Bash(git add backend/app/ && git commit -m \"feat: 实现 Agent 注册和查询 API\")",
+      "Bash(echo \"=== Add Comment ===\" && curl -s -X POST http://localhost:8000/api/posts/1/comments -H 'Content-Type: application/json' -d '{\"agent_id\": \"agent-001\", \"content\": \"Great post!\"}' && echo -e \"\\\\n\\\\n=== Add Reaction ===\" && curl -s -X POST http://localhost:8000/api/reactions -H 'Content-Type: application/json' -d '{\"agent_id\": \"agent-001\", \"target_type\": \"post\", \"target_id\": 1, \"emoji\": \"thumbsup\"}' && echo -e \"\\\\n\\\\n=== Get Reactions ===\" && curl -s http://localhost:8000/api/reactions/post/1)",
+      "Bash(curl -s -X POST 'http://localhost:8000/api/posts/1/comments' -H 'Content-Type: application/json' -d '{\"agent_id\": \"agent-001\", \"content\": \"Great post!\"}')",
+      "Bash(curl -s -X POST 'http://localhost:8000/api/posts/1/comments' -H 'Content-Type: application/json' --data-binary '{\"agent_id\": \"agent-001\", \"content\": \"Great post\"}')",
+      "Bash(echo \"=== Create Poll Post ===\" && curl -s -X POST http://localhost:8000/api/posts -H 'Content-Type: application/json' --data-binary '{\"agent_id\": \"agent-001\", \"title\": \"Favorite Language?\", \"content\": \"Vote now!\", \"is_poll\": true}' && echo -e \"\\\\n\\\\n=== Add Poll Options ===\" && curl -s -X POST 'http://localhost:8000/api/posts/2/options' -H 'Content-Type: application/json' --data-binary '{\"option_text\": \"Python\"}' && curl -s -X POST 'http://localhost:8000/api/posts/2/options' -H 'Content-Type: application/json' --data-binary '{\"option_text\": \"JavaScript\"}' && echo -e \"\\\\n\\\\n=== Get Poll Results ===\" && curl -s 'http://localhost:8000/api/polls/2/options')",
+      "Bash(curl -s -X POST http://localhost:8000/api/posts -H 'Content-Type: application/json' --data-binary '{\"agent_id\": \"agent-001\", \"title\": \"Favorite Language\", \"content\": \"Vote now\", \"is_poll\": true}')",
+      "Bash(curl -s -X POST 'http://localhost:8000/api/posts/2/options' -H 'Content-Type: application/json' --data-binary '{\"option_text\": \"Python\"}')",
+      "Bash(curl -s -X POST 'http://localhost:8000/api/posts/2/options' -H 'Content-Type: application/json' --data-binary '{\"option_text\": \"JavaScript\"}')",
+      "Bash(echo \"=== Get Poll Results ===\" && curl -s 'http://localhost:8000/api/polls/2/options' && echo -e \"\\\\n\\\\n=== Vote ===\" && curl -s -X POST 'http://localhost:8000/api/polls/2/vote' -H 'Content-Type: application/json' --data-binary '{\"agent_id\": \"agent-001\", \"option_ids\": [1]}' && echo -e \"\\\\n\\\\n=== Get Poll Results After Vote ===\" && curl -s 'http://localhost:8000/api/polls/2/options')",
+      "Bash(curl -s 'http://localhost:8000/api/activity')",
+      "Bash(sleep 5 && curl -s http://localhost:3000 | head -20)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(sleep 5 && curl -s http://localhost:3000/api/posts)",
+      "Bash(echo \"=== 团队成员状态 ===\" && curl -s http://localhost:8000/api/agents && echo -e \"\\\\n\\\\n=== 帖子列表 ===\" && curl -s http://localhost:8000/api/posts && echo -e \"\\\\n\\\\n=== Activity Log ===\" && curl -s http://localhost:8000/api/activity)",
+      "Bash(curl -s http://localhost:8000/api/activity)",
+      "Bash(curl -s http://localhost:3000/api/posts | head -50)",
+      "Bash(git add -A && git commit -m \"fix: 修复 Activity Log API schema 和 CORS 配置\")"
+    ]
+  }
+}

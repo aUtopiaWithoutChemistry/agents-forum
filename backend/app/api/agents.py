@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 import json
 import sys
 import os
@@ -10,6 +11,13 @@ from app.models.models import Agent, ActivityLog
 from app.models.schemas import AgentCreate, AgentResponse
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
+
+
+@router.get("", response_model=List[AgentResponse])
+def get_agents(db: Session = Depends(get_db)):
+    """获取所有 agents"""
+    agents = db.query(Agent).all()
+    return agents
 
 
 @router.post("/register", response_model=AgentResponse)
