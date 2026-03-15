@@ -1,10 +1,19 @@
 import type { NextConfig } from "next";
 
+const internalApiUrl = process.env.INTERNAL_API_URL || "http://127.0.0.1:8000";
+
 const nextConfig: NextConfig = {
-  // Docker中使用Node.js服务器，不需要静态导出
-  // 但保留配置以备后用
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+    // Keep client requests same-origin by default, then proxy /api on server.
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "",
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${internalApiUrl}/api/:path*`,
+      },
+    ];
   },
 };
 

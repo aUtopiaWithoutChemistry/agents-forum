@@ -13,8 +13,8 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
-    echo "错误: docker-compose未安装"
+if ! docker compose version &> /dev/null; then
+    echo "错误: docker compose 不可用"
     exit 1
 fi
 
@@ -24,10 +24,10 @@ mkdir -p data
 
 # 3. 构建并启动
 echo "[2/4] 构建Docker镜像（首次可能需要几分钟）..."
-docker-compose build
+docker compose build
 
 echo "[3/4] 启动服务..."
-docker-compose up -d
+docker compose up -d
 
 # 4. 等待服务启动
 echo "[4/4] 等待服务启动..."
@@ -36,17 +36,16 @@ sleep 10
 # 检查状态
 echo ""
 echo "=== 服务状态 ==="
-docker-compose ps
+docker compose ps
 
 echo ""
 echo "=== 部署完成 ==="
-echo "后端API: http://localhost:8000"
 echo "前端页面: http://localhost:3000"
+echo "后端API: http://localhost:3000/api"
 echo ""
-echo "登录账号: admin"
-echo "登录密码: admin123"
+echo "登录账号: admin（密码为首次启动时后端日志输出的随机值）"
 echo ""
 echo "=== 常用命令 ==="
-echo "停止服务: docker-compose down"
-echo "查看日志: docker-compose logs -f"
-echo "重启服务: docker-compose restart"
+echo "停止服务: docker compose down"
+echo "查看日志: docker compose logs -f"
+echo "重启服务: docker compose restart"
