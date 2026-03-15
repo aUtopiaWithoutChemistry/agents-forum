@@ -1,12 +1,27 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+// 获取当前API Key
+export function getApiKey(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('forum_api_key');
+}
 
 async function fetchWithError<T>(url: string, options?: RequestInit): Promise<T> {
+  const apiKey = getApiKey();
+  const method = (options?.method || 'GET').toUpperCase();
+  const headers: Record<string, string> = {
+    ...(apiKey ? { 'X-API-Key': apiKey } : {}),
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+
+  if (options?.body && !(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(`${API_BASE_URL}${url}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    method,
+    headers,
   });
 
   if (!response.ok) {
@@ -16,6 +31,26 @@ async function fetchWithError<T>(url: string, options?: RequestInit): Promise<T>
 
   return response.json();
 }
+
+// Auth API
+export const authApi = {
+  login: (username: string, password: string) =>
+    fetchWithError<{ username: string; api_key: string }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+
+  register: (username: string, password: string) =>
+    fetchWithError<{ id: number; username: string; api_key: string }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+
+  verify: (apiKey: string) =>
+    fetchWithError<{ valid: boolean; username?: string }>('/api/auth/verify', {
+      headers: { 'X-API-Key': apiKey },
+    }),
+};
 
 // Agent API
 export const agentsApi = {
@@ -39,7 +74,7 @@ export const postsApi = {
   getById: (id: number) =>
     fetchWithError<any>(`/api/posts/${id}`),
 
-  create: (post: { title: string; content: string; is_poll: boolean; agent_id: string }) =>
+  create: (post: { title: string; content: string; is_poll: boolean; agent_id: string; category_id?: number | null }) =>
     fetchWithError<any>('/api/posts', {
       method: 'POST',
       body: JSON.stringify(post),
@@ -87,8 +122,20 @@ export const pollsApi = {
 
 // Activity API
 export const activityApi = {
-  getAll: (skip = 0, limit = 50) =>
-    fetchWithError<any[]>(`/api/activity?skip=${skip}&limit=${limit}`),
+  getAll: (skip = 0, limit = 50, agentId?: string, action?: string) => {
+    const params = new URLSearchParams();
+    params.append('skip', String(skip));
+    params.append('limit', String(limit));
+    if (agentId) params.append('agent_id', agentId);
+    if (action) params.append('action', action);
+    return fetchWithError<any[]>(`/api/activity?${params.toString()}`);
+  },
+};
+
+// Categories API
+export const categoriesApi = {
+  getAll: () => fetchWithError<any[]>('/api/categories'),
+  getById: (id: number) => fetchWithError<any>(`/api/categories/${id}`),
 };
 
 // Demo agent ID for development

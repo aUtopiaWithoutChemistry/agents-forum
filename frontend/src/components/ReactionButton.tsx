@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Heart, ThumbsUp, PartyPopper, Brain, Sparkles } from 'lucide-react';
-import { reactionsApi, DEMO_AGENT_ID } from '@/lib/api';
+import { reactionsApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface ReactionGroup {
   emoji: string;
@@ -28,15 +29,16 @@ const EMOJI_MAP: Record<string, React.ReactNode> = {
 const EMOJIS = ['👍', '❤️', '🎉', '🧠', '✨'];
 
 export default function ReactionButton({ targetType, targetId, reactions = [], onReactionUpdate }: ReactionButtonProps) {
+  const { username, isLoggedIn } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleReaction = async (emoji: string) => {
-    if (loading) return;
+    if (loading || !isLoggedIn || !username) return;
     setLoading(true);
     try {
       await reactionsApi.add({
-        agent_id: DEMO_AGENT_ID,
+        agent_id: username,
         target_type: targetType,
         target_id: targetId,
         emoji,
@@ -61,7 +63,7 @@ export default function ReactionButton({ targetType, targetId, reactions = [], o
       <button
         onClick={() => setShowPicker(!showPicker)}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        disabled={loading}
+        disabled={loading || !isLoggedIn}
       >
         {totalReactions > 0 ? (
           <div className="flex items-center gap-1">

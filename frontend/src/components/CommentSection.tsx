@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { postsApi, DEMO_AGENT_ID } from '@/lib/api';
+import { postsApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import ReactionButton from './ReactionButton';
 
 interface Author {
@@ -30,6 +31,7 @@ interface CommentSectionProps {
 }
 
 export default function CommentSection({ postId, comments, agents, onCommentAdded }: CommentSectionProps) {
+  const { isLoggedIn, username } = useAuth();
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
@@ -41,8 +43,9 @@ export default function CommentSection({ postId, comments, agents, onCommentAdde
 
     setLoading(true);
     try {
+      if (!username) return;
       await postsApi.addComment(postId, {
-        agent_id: DEMO_AGENT_ID,
+        agent_id: username,
         content: content.trim(),
         parent_id: parentId,
       });
@@ -145,31 +148,37 @@ export default function CommentSection({ postId, comments, agents, onCommentAdde
   return (
     <div className="space-y-4">
       {/* New Comment */}
-      <div className="flex gap-3">
-        <div className="flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-medium">
-            Me
+      {isLoggedIn ? (
+        <div className="flex gap-3">
+          <div className="flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-medium">
+              Me
+            </div>
+          </div>
+          <div className="flex-1">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="写下你的评论..."
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              rows={2}
+            />
+            <div className="mt-2 flex justify-end">
+              <button
+                onClick={() => handleSubmit()}
+                disabled={loading || !newComment.trim()}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              >
+                {loading ? '发送中...' : '发送评论'}
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex-1">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="写下你的评论..."
-            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-            rows={2}
-          />
-          <div className="mt-2 flex justify-end">
-            <button
-              onClick={() => handleSubmit()}
-              disabled={loading || !newComment.trim()}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
-            >
-              {loading ? '发送中...' : '发送评论'}
-            </button>
-          </div>
+      ) : (
+        <div className="text-center py-4 text-muted-foreground">
+          <a href="/login" className="text-primary hover:underline">登录</a> 后可以发表评论
         </div>
-      </div>
+      )}
 
       {/* Comments List */}
       <div className="divide-y divide-border">

@@ -1,25 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card: #f9fafb;
-  --card-foreground: #1f2937;
+  /* 明亮轻快的配色方案 */
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
   --popover: #ffffff;
-  --popover-foreground: #1f2937;
-  --primary: #4f46e5;
+  --popover-foreground: #1e293b;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --secondary: #f3f4f6;
-  --secondary-foreground: #4b5563;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --accent: #f3f4f6;
-  --accent-foreground: #4b5563;
+  --secondary: #e0e7ff;
+  --secondary-foreground: #4338ca;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f0fdf4;
+  --accent-foreground: #166534;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #4f46e5;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #6366f1;
 }
 
 @theme inline {
@@ -44,25 +45,6 @@
   --color-ring: var(--ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: #171717;
-    --card-foreground: #f9fafb;
-    --popover: #171717;
-    --popover-foreground: #f9fafb;
-    --secondary: #262626;
-    --secondary-foreground: #f3f4f6;
-    --muted: #262626;
-    --muted-foreground: #9ca3af;
-    --accent: #262626;
-    --accent-foreground: #f3f4f6;
-    --border: #262626;
-    --input: #262626;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -76,4 +58,24 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* 卡片悬浮效果 */
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px -10px rgba(99, 102, 241, 0.2);
+}
+
+/* 渐变背景 */
+.gradient-bg {
+  background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 50%, #f0fdf4 100%);
+}
+
+/* 按钮渐变 */
+.btn-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
 }

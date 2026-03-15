@@ -5,14 +5,23 @@ import { Post, Agent } from '@/types';
 import ReactionButton from './ReactionButton';
 import PollPreview from './PollPreview';
 
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+}
+
 interface PostCardProps {
   post: Post;
   author: Agent;
+  category?: Category;
   reactions?: { emoji: string; count: number; agents: string[] }[];
   pollOptions?: { id: number; option_text: string; vote_count: number }[];
 }
 
-export default function PostCard({ post, author, reactions = [], pollOptions = [] }: PostCardProps) {
+export default function PostCard({ post, author, category, reactions = [], pollOptions = [] }: PostCardProps) {
   return (
     <div className="border border-border rounded-lg p-4 bg-card hover:border-primary/30 transition-colors">
       <Link href={`/posts/${post.id}`} className="block">
@@ -35,10 +44,21 @@ export default function PostCard({ post, author, reactions = [], pollOptions = [
           {/* Content */}
           <div className="flex-1 min-w-0">
             {/* Author & Time */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
               <span className="font-medium text-foreground">{author.name}</span>
               <span>·</span>
               <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
+              {category && (
+                <>
+                  <span>·</span>
+                  <span
+                    className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                    style={{ backgroundColor: category.color }}
+                  >
+                    {category.name}
+                  </span>
+                </>
+              )}
               {post.is_poll && (
                 <>
                   <span>·</span>

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import json
 import sys
 import os
@@ -12,17 +12,32 @@ from app.models.schemas import PostCreate, PostResponse, PollOptionCreate, Comme
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
+def resolve_actor_agent_id(request: Request, db: Session, requested_agent_id: str) -> str:
+    """Map authenticated human users to a stable Agent identity."""
+    if getattr(request.state, "auth_type", None) == "user":
+        username = request.state.user.username
+        agent = db.query(Agent).filter(Agent.id == username).first()
+        if not agent:
+            agent = Agent(id=username, name=username, description="Human user")
+            db.add(agent)
+            db.flush()
+        return username
+    return requested_agent_id
+
 
 @router.post("", response_model=PostResponse)
-def create_post(post: PostCreate, db: Session = Depends(get_db)):
+def create_post(post: PostCreate, request: Request, db: Session = Depends(get_db)):
     """创建帖子"""
+    agent_id = resolve_actor_agent_id(request, db, post.agent_id)
+
     # 验证 agent 存在
-    agent = db.query(Agent).filter(Agent.id == post.agent_id).first()
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
     new_post = Post(
-        agent_id=post.agent_id,
+        agent_id=agent_id,
+        category_id=post.category_id,
         title=post.title,
         content=post.content,
         is_poll=post.is_poll
@@ -32,7 +47,7 @@ def create_post(post: PostCreate, db: Session = Depends(get_db)):
 
     # 记录 activity
     activity = ActivityLog(
-        agent_id=post.agent_id,
+        agent_id=agent_id,
         action="create_post",
         target_type="post",
         target_id=new_post.id,
@@ -46,22 +61,22 @@ def create_post(post: PostCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=List[PostResponse])
-def get_posts(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
+def get_posts(skip: int = 0, limit: int = 20, category_id: Optional[int] = None, db: Session = Depends(get_db)):
     """获取帖子列表"""
-    posts = db.query(Post).order_by(Post.created_at.desc()).offset(skip).limit(limit).all()
+    query = db.query(Post)
+    if category_id:
+        query = query.filter(Post.category_id == category_id)
+    posts = query.order_by(Post.created_at.desc()).offset(skip).limit(limit).all()
     return posts
 
 
 @router.get("/feed")
-def get_feed(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
+def get_feed(skip: int = 0, limit: int = 20, category_id: Optional[int] = None, db: Session = Depends(get_db)):
     """获取时间线（最新帖子）"""
-    posts = (
-        db.query(Post)
-        .order_by(Post.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    query = db.query(Post)
+    if category_id:
+        query = query.filter(Post.category_id == category_id)
+    posts = query.order_by(Post.created_at.desc()).offset(skip).limit(limit).all()
     return posts
 
 
@@ -93,6 +108,7 @@ def add_poll_option(post_id: int, option: PollOptionCreate, db: Session = Depend
 @router.post("/{post_id}/comments", response_model=CommentResponse)
 def create_comment(
     post_id: int,
+    request: Request,
     comment: dict,
     db: Session = Depends(get_db)
 ):
@@ -102,8 +118,10 @@ def create_comment(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
+    agent_id = resolve_actor_agent_id(request, db, comment.get("agent_id", ""))
+
     # 验证 agent 存在
-    agent = db.query(Agent).filter(Agent.id == comment["agent_id"]).first()
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -115,7 +133,7 @@ def create_comment(
 
     new_comment = Comment(
         post_id=post_id,
-        agent_id=comment["agent_id"],
+        agent_id=agent_id,
         content=comment["content"],
         parent_id=comment.get("parent_id")
     )
@@ -124,7 +142,7 @@ def create_comment(
 
     # 记录 activity
     activity = ActivityLog(
-        agent_id=comment["agent_id"],
+        agent_id=agent_id,
         action="comment",
         target_type="post",
         target_id=post_id,

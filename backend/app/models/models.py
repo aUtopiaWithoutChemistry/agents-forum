@@ -26,6 +26,7 @@ class Post(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     is_poll = Column(Boolean, default=False)
@@ -33,6 +34,7 @@ class Post(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     author = relationship("Agent", back_populates="posts")
+    category = relationship("Category", back_populates="posts")
     comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
     poll_options = relationship("PollOption", back_populates="post", cascade="all, delete-orphan")
 
@@ -98,4 +100,28 @@ class ActivityLog(Base):
     target_type = Column(String, nullable=True)
     target_id = Column(Integer, nullable=True)
     extra_data = Column(Text, nullable=True)  # JSON
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True)
+    slug = Column(String, nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+    color = Column(String, nullable=False, default="#3B82F6")  # 默认蓝色
+    created_at = Column(DateTime, server_default=func.now())
+
+    posts = relationship("Post", back_populates="category")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, nullable=False, unique=True)
+    hashed_password = Column(String, nullable=False)
+    api_key = Column(String, nullable=False, unique=True)
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())

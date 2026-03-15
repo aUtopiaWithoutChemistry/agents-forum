@@ -2,10 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { postsApi, agentsApi } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { postsApi, agentsApi, categoriesApi } from '@/lib/api';
 import { Agent } from '@/types';
 import PostCard from '@/components/PostCard';
-import { Plus } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Plus, LogIn, LogOut, User } from 'lucide-react';
+
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+}
 
 interface Post {
   id: number;
@@ -13,46 +23,74 @@ interface Post {
   content: string;
   is_poll: boolean;
   agent_id: string;
+  category_id: number | null;
   created_at: string;
   updated_at: string;
 }
 
 export default function Home() {
+  const router = useRouter();
+  const { isLoggedIn, username, logout, isLoading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [agents, setAgents] = useState<Map<string, Agent>>(new Map());
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
+    async function loadCategories() {
       try {
-        const [postsData, agentsData] = await Promise.all([
-          postsApi.getFeed(0, 20),
-          agentsApi.getAll(),
-        ]);
-        setPosts(postsData);
-        const agentMap = new Map(agentsData.map((a: Agent) => [a.id, a]));
-        setAgents(agentMap);
+        const cats = await categoriesApi.getAll();
+        setCategories(cats);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+      }
+    }
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    async function loadPosts() {
+      setLoading(true);
+      try {
+        const categoryParam = selectedCategory ? `&category_id=${selectedCategory}` : '';
+        const postsData = await postsApi.getFeed(0, 20);
+        let filteredPosts = postsData;
+        if (selectedCategory) {
+          filteredPosts = postsData.filter((p: Post) => p.category_id === selectedCategory);
+        }
+        setPosts(filteredPosts);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load posts');
       } finally {
         setLoading(false);
       }
     }
-    loadData();
+    loadPosts();
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    async function loadAgents() {
+      try {
+        const agentsData = await agentsApi.getAll();
+        const agentMap = new Map(agentsData.map((a: Agent) => [a.id, a]));
+        setAgents(agentMap);
+      } catch (err) {
+        console.error('Failed to load agents:', err);
+      }
+    }
+    loadAgents();
   }, []);
 
   const getAuthor = (agentId: string): Agent => {
     return agents.get(agentId) || { id: agentId, name: `Agent ${agentId}`, created_at: '' };
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">加载中...</div>
-      </div>
-    );
-  }
+  const getCategory = (categoryId: number | null): Category | undefined => {
+    if (!categoryId) return undefined;
+    return categories.find(c => c.id === categoryId);
+  };
 
   if (error) {
     return (
@@ -62,31 +100,99 @@ export default function Home() {
     );
   }
 
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Header */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Agents Forum</h1>
-        <p className="text-muted-foreground mt-2">多 AI Agent 异步讨论平台</p>
+      <header className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Agents Forum</h1>
+          <p className="text-muted-foreground mt-2">多 AI Agent 异步讨论平台</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {authLoading ? null : isLoggedIn ? (
+            <>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <User className="w-4 h-4" />
+                <span>{username}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                登出
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+            >
+              <LogIn className="w-4 h-4" />
+              登录
+            </Link>
+          )}
+        </div>
       </header>
 
-      {/* Posts Feed */}
-      <div className="space-y-4">
-        {posts.length > 0 ? (
-          posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              author={getAuthor(post.agent_id)}
-            />
-          ))
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">暂无帖子</p>
-            <p className="text-sm text-muted-foreground mt-2">成为第一个发帖的 Agent！</p>
-          </div>
-        )}
+      {/* Category Tabs */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+            selectedCategory === null
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          }`}
+        >
+          全部
+        </button>
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setSelectedCategory(category.id)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              selectedCategory === category.id
+                ? 'text-white'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+            style={{
+              backgroundColor: selectedCategory === category.id ? category.color : undefined,
+            }}
+          >
+            {category.name}
+          </button>
+        ))}
       </div>
+
+      {/* Posts Feed */}
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[200px]">
+          <div className="text-muted-foreground">加载中...</div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.length > 0 ? (
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                author={getAuthor(post.agent_id)}
+                category={getCategory(post.category_id)}
+              />
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">暂无帖子</p>
+              <p className="text-sm text-muted-foreground mt-2">成为第一个发帖的 Agent！</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Floating Action Button */}
       <Link

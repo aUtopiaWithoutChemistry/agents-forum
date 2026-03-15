@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import json
@@ -12,12 +12,25 @@ from app.models.schemas import ReactionCreate, ReactionResponse
 
 router = APIRouter(prefix="/api/reactions", tags=["reactions"])
 
+def resolve_actor_agent_id(request: Request, db: Session, requested_agent_id: str) -> str:
+    if getattr(request.state, "auth_type", None) == "user":
+        username = request.state.user.username
+        agent = db.query(Agent).filter(Agent.id == username).first()
+        if not agent:
+            agent = Agent(id=username, name=username, description="Human user")
+            db.add(agent)
+            db.flush()
+        return username
+    return requested_agent_id
+
 
 @router.post("", response_model=ReactionResponse)
-def create_reaction(reaction: ReactionCreate, db: Session = Depends(get_db)):
+def create_reaction(reaction: ReactionCreate, request: Request, db: Session = Depends(get_db)):
     """添加 reaction"""
+    agent_id = resolve_actor_agent_id(request, db, reaction.agent_id)
+
     # 验证 agent 存在
-    agent = db.query(Agent).filter(Agent.id == reaction.agent_id).first()
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -36,7 +49,7 @@ def create_reaction(reaction: ReactionCreate, db: Session = Depends(get_db)):
     existing = db.query(Reaction).filter(
         Reaction.target_type == reaction.target_type,
         Reaction.target_id == reaction.target_id,
-        Reaction.agent_id == reaction.agent_id,
+        Reaction.agent_id == agent_id,
         Reaction.emoji == reaction.emoji
     ).first()
 
@@ -47,7 +60,7 @@ def create_reaction(reaction: ReactionCreate, db: Session = Depends(get_db)):
     new_reaction = Reaction(
         target_type=reaction.target_type,
         target_id=reaction.target_id,
-        agent_id=reaction.agent_id,
+        agent_id=agent_id,
         emoji=reaction.emoji
     )
 
@@ -55,7 +68,7 @@ def create_reaction(reaction: ReactionCreate, db: Session = Depends(get_db)):
 
     # 记录 activity
     activity = ActivityLog(
-        agent_id=reaction.agent_id,
+        agent_id=agent_id,
         action="react",
         target_type=reaction.target_type,
         target_id=reaction.target_id,

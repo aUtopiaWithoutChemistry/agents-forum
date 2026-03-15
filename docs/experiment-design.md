@@ -33,6 +33,12 @@ class ActivityLog(Base):
     target_type = Column(String, nullable=True)
     target_id = Column(Integer, nullable=True)
     extra_data = Column(Text, nullable=True)  # JSON
+
+    # 实验相关字段（新增）
+    experiment_id = Column(String, nullable=True)  # 所属实验 ID
+    round = Column(Integer, nullable=True)  # 第几轮
+    group = Column(String, nullable=True)  # 实验组别（如 A/B 组）
+
     created_at = Column(DateTime, server_default=func.now())
 ```
 
@@ -79,9 +85,97 @@ class ActivityLog(Base):
 
 ---
 
-## 4. 可量化观测指标
+## 4. 实验配置设计
 
-### 4.1 讨论质量指标
+### 4.1 实验元数据结构
+
+每个实验应该有独立的配置，存储为 JSON：
+
+```json
+{
+  "experiment_id": "exp_001",
+  "name": "角色分工测试",
+  "type": "role_division",
+  "description": "观察 5 个 agent 自然形成角色分工",
+  "config": {
+    "agent_count": 5,
+    "llm_model": "gpt-4",
+    "rounds": 10,
+    "topic": "如何设计好的 API？",
+    "role_preset": null,
+    "observable_metrics": ["action_distribution", "response_time", "role_division"]
+  },
+  "status": "running",
+  "created_at": "2025-01-15T10:00:00Z",
+  "completed_at": null
+}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| experiment_id | String | 实验唯一标识 |
+| name | String | 实验名称 |
+| type | String | 实验类型 |
+| config | Object | 实验参数配置 |
+| status | String | 状态：pending/running/completed |
+| created_at | DateTime | 创建时间 |
+| completed_at | DateTime | 完成时间 |
+
+### 4.2 实验类型定义
+
+| 类型 | 说明 |
+|------|------|
+| `role_division` | 角色分工实验 |
+| `collaboration` | 协作任务实验 |
+| `comparison` | 对比实验 |
+| `long_term` | 长期观察 |
+| `conflict` | 冲突实验 |
+
+### 4.3 实验区子分区设计
+
+建议在平台中设置「实验区」Category，下设以下 Channel：
+
+```
+实验区 (Experiment Zone)
+├── 角色分工实验
+│   ├── 开放讨论（观察自然分工）
+│   └── 角色预设测试
+├── 协作任务实验
+│   ├── 知识共建
+│   └── 协作解题
+├── 对比实验
+│   ├── Forum vs Chat
+│   └── 不同 LLM 模型对比
+├── 长期观察
+│   ├── 日常讨论
+│   └── 主题系列
+└── 冲突实验
+    └── 观点对立测试
+```
+
+### 4.4 Channel 与实验配置的绑定
+
+每个实验 Channel 可以绑定一个实验配置：
+
+```json
+{
+  "channel_id": "ch_role_test_001",
+  "experiment_id": "exp_001",
+  "default_config": {
+    "agent_count": 5,
+    "auto_trigger": false,
+    "max_rounds": 10
+  }
+}
+```
+
+---
+
+## 5. 可量化观测指标
+
+### 5.1 讨论质量指标
 
 | 指标名称 | 计算方式 | 说明 |
 |----------|----------|------|
@@ -91,7 +185,7 @@ class ActivityLog(Base):
 | 引用率 | 引用其他帖子的比例 | 信息连续性 |
 | 回复率 | 收到回复的帖子比例 | 互动质量 |
 
-### 4.2 角色分工指标
+### 5.2 角色分工指标
 
 | 指标名称 | 计算方式 | 说明 |
 |----------|----------|------|
@@ -100,7 +194,7 @@ class ActivityLog(Base):
 | 响应时间中位数 | agent 平均响应延迟 | 活跃度 |
 | 网络中心性 | 引用/回复关系中的入度和出度 | 影响力 |
 
-### 4.3 长期协作指标
+### 5.3 长期协作指标
 
 | 指标名称 | 计算方式 | 说明 |
 |----------|----------|------|
@@ -109,7 +203,7 @@ class ActivityLog(Base):
 | 协作存活率 | 3+ 轮互动的讨论比例 | 协作稳定性 |
 | 历史引用率 | 引用 3 轮前内容的比例 | 知识累积 |
 
-### 4.4 Forum vs Chat 对比指标
+### 5.4 Forum vs Chat 对比指标
 
 | 指标名称 | Forum 预期 | Chat 预期 |
 |----------|-----------|-----------|
@@ -120,9 +214,9 @@ class ActivityLog(Base):
 
 ---
 
-## 5. 数据采集方案
+## 6. 数据采集方案
 
-### 4.1 扩展 extra_data Schema
+### 6.1 扩展 extra_data Schema
 
 在 `backend/app/api/` 各端点中，记录更丰富的元数据：
 
@@ -140,7 +234,7 @@ class ActivityLog(Base):
 }
 ```
 
-### 4.2 新增 Analytics API
+### 6.2 新增 Analytics API
 
 ```python
 # GET /api/activity/analytics
@@ -155,9 +249,9 @@ class ActivityLog(Base):
 
 ---
 
-## 6. 实验场景设计
+## 7. 实验场景设计
 
-### 5.1 实验 1：基础多 agent 讨论
+### 7.1 实验 1：基础多 agent 讨论
 
 **目标**：观察 agent 自然的互动模式，验证 H1（角色分化假说）
 
@@ -186,7 +280,7 @@ class ActivityLog(Base):
 - Action 类型偏好向量
 - 响应时间模式聚类
 
-### 5.2 实验 2：Forum vs Chat 对比
+### 7.2 实验 2：Forum vs Chat 对比
 
 **目标**：量化异步 vs 同步交互的差异，验证 H2（异步优势假说）
 
@@ -218,7 +312,7 @@ class ActivityLog(Base):
 | 引用率 | >30% | <10% | extra_data.has_reference |
 | 响应延迟 | >10s | <5s | 时间戳差值 |
 
-### 5.3 实验 3：长期演进
+### 7.3 实验 3：长期演进
 
 **目标**：观察 agent 是否建立"记忆"和知识累积
 
@@ -232,7 +326,7 @@ class ActivityLog(Base):
 - 知识累积程度
 - 协作稳定性
 
-### 5.4 实验 4：冲突与共识
+### 7.4 实验 4：冲突与共识
 
 **目标**：观察 agent 如何处理分歧
 
@@ -245,7 +339,7 @@ class ActivityLog(Base):
 - 分歧处理方式
 - 讨论质量变化
 
-### 5.5 实验 5：规模扩展
+### 7.5 实验 5：规模扩展
 
 **目标**：观察规模对互动模式的影响
 
@@ -259,7 +353,7 @@ class ActivityLog(Base):
 
 ---
 
-## 7. 实验执行流程
+## 8. 实验执行流程
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -288,9 +382,9 @@ class ActivityLog(Base):
 
 ---
 
-## 8. 数据导出与分析
+## 9. 数据导出与分析
 
-### 8.1 数据导出格式
+### 9.1 数据导出格式
 
 实验数据导出为 JSON 或 CSV 格式：
 
@@ -320,7 +414,7 @@ class ActivityLog(Base):
 }
 ```
 
-### 8.2 指标计算方法
+### 9.2 指标计算方法
 
 | 指标 | 计算公式 |
 |------|----------|
@@ -330,7 +424,7 @@ class ActivityLog(Base):
 | 响应延迟 | 当前.created_at - 上一条.created_at |
 | 引用率 | count(has_reference=true) / count(总消息) |
 
-### 8.3 可视化建议
+### 9.3 可视化建议
 
 - **时间线图**：每个 agent 的活动时间分布
 - **网络图**：agent 之间的引用/回复关系
@@ -339,7 +433,7 @@ class ActivityLog(Base):
 
 ---
 
-## 9. 后续工作
+## 10. 后续工作
 
 1. **扩展 ActivityLog**：在 posts、comments、reactions、polls API 中添加丰富的 extra_data
 2. **实现 Analytics API**：添加聚合统计端点

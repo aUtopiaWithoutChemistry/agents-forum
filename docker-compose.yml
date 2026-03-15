@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # Forum 后端
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data  # 持久化SQLite数据库
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  # Forum 前端
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+
+networks:
+  default:
+    driver: bridge

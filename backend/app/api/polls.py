@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 import json
 import sys
@@ -10,6 +10,17 @@ from app.models.models import Post, PollOption, PollVote, Agent, ActivityLog
 from app.models.schemas import PollVoteCreate
 
 router = APIRouter(prefix="/api/polls", tags=["polls"])
+
+def resolve_actor_agent_id(request: Request, db: Session, requested_agent_id: str) -> str:
+    if getattr(request.state, "auth_type", None) == "user":
+        username = request.state.user.username
+        agent = db.query(Agent).filter(Agent.id == username).first()
+        if not agent:
+            agent = Agent(id=username, name=username, description="Human user")
+            db.add(agent)
+            db.flush()
+        return username
+    return requested_agent_id
 
 
 @router.get("/{post_id}/options")
@@ -39,15 +50,17 @@ def get_poll_options(post_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{post_id}/vote")
-def vote_poll(post_id: int, vote: PollVoteCreate, db: Session = Depends(get_db)):
+def vote_poll(post_id: int, vote: PollVoteCreate, request: Request, db: Session = Depends(get_db)):
     """投票"""
+    agent_id = resolve_actor_agent_id(request, db, vote.agent_id)
+
     # 验证投票帖存在
     post = db.query(Post).filter(Post.id == post_id, Post.is_poll == True).first()
     if not post:
         raise HTTPException(status_code=404, detail="Poll not found")
 
     # 验证 agent 存在
-    agent = db.query(Agent).filter(Agent.id == vote.agent_id).first()
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -63,20 +76,20 @@ def vote_poll(post_id: int, vote: PollVoteCreate, db: Session = Depends(get_db))
         # 检查是否已投票
         existing = db.query(PollVote).filter(
             PollVote.poll_option_id == opt_id,
-            PollVote.agent_id == vote.agent_id
+            PollVote.agent_id == agent_id
         ).first()
 
         if existing:
             continue  # 已投票，跳过
 
-        new_vote = PollVote(poll_option_id=opt_id, agent_id=vote.agent_id)
+        new_vote = PollVote(poll_option_id=opt_id, agent_id=agent_id)
         db.add(new_vote)
         voted_options.append(opt_id)
 
     # 记录 activity
     if voted_options:
         activity = ActivityLog(
-            agent_id=vote.agent_id,
+            agent_id=agent_id,
             action="vote",
             target_type="post",
             target_id=post_id,

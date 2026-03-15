@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import { pollsApi, DEMO_AGENT_ID } from '@/lib/api';
+import { pollsApi } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface PollOption {
   id: number;
@@ -18,20 +19,23 @@ interface PollVotingProps {
 }
 
 export default function PollVoting({ postId, options: initialOptions, onVoteUpdate }: PollVotingProps) {
-  const [options, setOptions] = useState<PollOption[]>(initialOptions);
+  const { isLoggedIn, username } = useAuth();
+  const [options] = useState<PollOption[]>(initialOptions);
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
 
   useEffect(() => {
-    const hasUserVoted = options.some((opt) => opt.voted_agents.includes(DEMO_AGENT_ID));
+    const hasUserVoted = username
+      ? options.some((opt) => opt.voted_agents.includes(username))
+      : false;
     setHasVoted(hasUserVoted);
-  }, [options]);
+  }, [options, username]);
 
   const totalVotes = options.reduce((sum, opt) => sum + opt.vote_count, 0);
 
   const handleOptionToggle = (optionId: number) => {
-    if (hasVoted) return;
+    if (hasVoted || !isLoggedIn) return;
     setSelectedOptions((prev) =>
       prev.includes(optionId)
         ? prev.filter((id) => id !== optionId)
@@ -40,11 +44,11 @@ export default function PollVoting({ postId, options: initialOptions, onVoteUpda
   };
 
   const handleVote = async () => {
-    if (selectedOptions.length === 0 || loading) return;
+    if (selectedOptions.length === 0 || loading || !isLoggedIn || !username) return;
     setLoading(true);
     try {
       await pollsApi.vote(postId, {
-        agent_id: DEMO_AGENT_ID,
+        agent_id: username,
         option_ids: selectedOptions,
       });
       setHasVoted(true);
@@ -61,19 +65,21 @@ export default function PollVoting({ postId, options: initialOptions, onVoteUpda
       {options.map((option) => {
         const percentage = totalVotes > 0 ? (option.vote_count / totalVotes) * 100 : 0;
         const isSelected = selectedOptions.includes(option.id);
-        const isVoted = option.voted_agents.includes(DEMO_AGENT_ID);
+        const isVoted = username ? option.voted_agents.includes(username) : false;
 
         return (
           <button
             key={option.id}
             onClick={() => handleOptionToggle(option.id)}
-            disabled={hasVoted}
+            disabled={hasVoted || !isLoggedIn}
             className={`w-full relative overflow-hidden rounded-lg border text-left transition-all ${
               isSelected
                 ? 'border-primary bg-primary/5'
                 : isVoted
                 ? 'border-green-500 bg-green-500/5'
-                : 'border-border hover:border-primary/50'
+                : isLoggedIn
+                ? 'border-border hover:border-primary/50'
+                : 'border-border opacity-60'
             }`}
           >
             <div
@@ -106,17 +112,25 @@ export default function PollVoting({ postId, options: initialOptions, onVoteUpda
 
       <div className="flex items-center justify-between pt-2">
         <span className="text-sm text-muted-foreground">共 {totalVotes} 人投票</span>
-        {!hasVoted && selectedOptions.length > 0 && (
-          <button
-            onClick={handleVote}
-            disabled={loading}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            {loading ? '投票中...' : `投票 (${selectedOptions.length})`}
-          </button>
-        )}
-        {hasVoted && (
-          <span className="text-sm text-green-600 font-medium">已投票</span>
+        {isLoggedIn ? (
+          <>
+            {!hasVoted && selectedOptions.length > 0 && (
+              <button
+                onClick={handleVote}
+                disabled={loading}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {loading ? '投票中...' : `投票 (${selectedOptions.length})`}
+              </button>
+            )}
+            {hasVoted && (
+              <span className="text-sm text-green-600 font-medium">已投票</span>
+            )}
+          </>
+        ) : (
+          <a href="/login" className="text-sm text-primary hover:underline">
+            登录后投票
+          </a>
         )}
       </div>
     </div>

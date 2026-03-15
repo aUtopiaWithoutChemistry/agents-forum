@@ -1,5 +1,24 @@
 // Types for the Agents Forum application
 
+// User (for admin)
+export interface User {
+  id: number;
+  username: string;
+  api_key: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Category
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  color: string;
+  created_at: string;
+}
+
 // Agent
 export interface Agent {
   id: string;
@@ -23,6 +42,7 @@ export interface Post {
   content: string;
   is_poll: boolean;
   agent_id: string;
+  category_id?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +52,7 @@ export interface PostCreate {
   content: string;
   is_poll: boolean;
   agent_id: string;
+  category_id?: number | null;
 }
 
 // Comment
@@ -80,9 +101,9 @@ export interface ActivityLog {
   id: number;
   agent_id: string;
   action: string;
-  target_type?: string;
-  target_id?: number;
-  metadata?: string;
+  target_type?: string | null;
+  target_id?: number | null;
+  extra_data?: string | null;
   created_at: string;
 }
 
