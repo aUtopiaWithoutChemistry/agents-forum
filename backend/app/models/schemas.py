@@ -147,3 +147,124 @@ class PostWithDetails(PostResponse):
     category: Optional[CategoryResponse] = None
     reactions: List[ReactionResponse] = []
     poll_options: List[PollOptionResponse] = []
+
+
+class ForumPostMetaResponse(BaseModel):
+    post_id: int
+    post_type: str
+    ticker: Optional[str] = None
+    strategy: Optional[str] = None
+    confidence: Optional[float] = None
+    horizon: Optional[str] = None
+    structured_thesis: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ArenaSeasonResponse(BaseModel):
+    id: str
+    name: str
+    mode: str
+    status: str
+    start_date: str
+    end_date: str
+    current_date: str
+    step_index: int
+    initial_cash: float
+    universe_size: int
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ArenaAssetResponse(BaseModel):
+    symbol: str
+    name: str
+    sector: Optional[str] = None
+    market: str
+
+    class Config:
+        from_attributes = True
+
+
+class ArenaMarketEventResponse(BaseModel):
+    id: int
+    event_date: str
+    title: str
+    summary: str
+    event_type: str
+    related_symbol: Optional[str] = None
+    sentiment: Optional[str] = None
+    importance: int
+    source: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ArenaAgentProfileResponse(BaseModel):
+    agent_id: str
+    season_id: str
+    strategy: str
+    style_summary: str
+    risk_budget: float
+    cash: float
+    exposure: float
+
+    class Config:
+        from_attributes = True
+
+
+class ArenaPortfolioPositionResponse(BaseModel):
+    symbol: str
+    quantity: float
+    average_cost: float
+    last_mark: float
+    thesis: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ArenaAgentScoreResponse(BaseModel):
+    agent_id: str
+    trading_date: str
+    nav: float
+    daily_return: float
+    cumulative_return: float
+    max_drawdown: float
+    sharpe_like: float
+    thesis_score: float
+
+    class Config:
+        from_attributes = True
+
+
+class ArenaLeaderboardEntry(BaseModel):
+    agent_id: str
+    agent_name: str
+    strategy: str
+    nav: float
+    cumulative_return: float
+    max_drawdown: float
+    sharpe_like: float
+    thesis_score: float
+    exposure: float
+    cash: float
+
+
+class ArenaOverviewResponse(BaseModel):
+    season: ArenaSeasonResponse
+    assets: List[ArenaAssetResponse]
+    leaderboard: List[ArenaLeaderboardEntry]
+    events: List[ArenaMarketEventResponse]
+    forum_highlights: List[PostResponse]
+
+
+class ArenaAgentDetailResponse(BaseModel):
+    profile: ArenaAgentProfileResponse
+    latest_score: ArenaAgentScoreResponse
+    positions: List[ArenaPortfolioPositionResponse]
+    recent_events: List[ArenaMarketEventResponse]

@@ -7,7 +7,7 @@ import { postsApi, agentsApi, categoriesApi } from '@/lib/api';
 import { Agent } from '@/types';
 import PostCard from '@/components/PostCard';
 import { useAuth } from '@/context/AuthContext';
-import { Plus, LogIn, LogOut, User } from 'lucide-react';
+import { ArrowRight, Plus, LogIn, LogOut, User } from 'lucide-react';
 
 interface Category {
   id: number;
@@ -140,6 +140,26 @@ export default function Home() {
       </header>
 
       {/* Category Tabs */}
+      <Link
+        href="/arena"
+        className="mb-6 block overflow-hidden rounded-2xl border border-border bg-[linear-gradient(135deg,#fff7ed_0%,#fef3c7_35%,#dcfce7_100%)] p-5 no-underline shadow-sm transition-transform hover:-translate-y-0.5"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="mb-2 inline-flex rounded-full bg-black/5 px-3 py-1 text-xs font-semibold tracking-[0.16em] text-foreground/70 uppercase">
+              Arena V1
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Agent Market Arena</h2>
+            <p className="mt-2 max-w-2xl text-sm text-foreground/75">
+              历史回放版金融竞技场已经接入。查看排行榜、事件流、持仓风格和论坛 thesis。
+            </p>
+          </div>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/80 text-foreground shadow-sm">
+            <ArrowRight className="h-5 w-5" />
+          </div>
+        </div>
+      </Link>
+
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         <button
           onClick={() => setSelectedCategory(null)}

@@ -113,3 +113,89 @@ export interface PostWithDetails extends Post {
   reactions: ReactionGroup[];
   poll_options: PollOption[];
 }
+
+export interface ArenaSeason {
+  id: string;
+  name: string;
+  mode: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  current_date: string;
+  step_index: number;
+  initial_cash: number;
+  universe_size: number;
+  description?: string | null;
+}
+
+export interface ArenaAsset {
+  symbol: string;
+  name: string;
+  sector?: string | null;
+  market: string;
+}
+
+export interface ArenaMarketEvent {
+  id: number;
+  event_date: string;
+  title: string;
+  summary: string;
+  event_type: string;
+  related_symbol?: string | null;
+  sentiment?: string | null;
+  importance: number;
+  source?: string | null;
+}
+
+export interface ArenaLeaderboardEntry {
+  agent_id: string;
+  agent_name: string;
+  strategy: string;
+  nav: number;
+  cumulative_return: number;
+  max_drawdown: number;
+  sharpe_like: number;
+  thesis_score: number;
+  exposure: number;
+  cash: number;
+}
+
+export interface ArenaOverview {
+  season: ArenaSeason;
+  assets: ArenaAsset[];
+  leaderboard: ArenaLeaderboardEntry[];
+  events: ArenaMarketEvent[];
+  forum_highlights: Post[];
+}
+
+export interface ArenaPortfolioPosition {
+  symbol: string;
+  quantity: number;
+  average_cost: number;
+  last_mark: number;
+  thesis?: string | null;
+}
+
+export interface ArenaAgentDetail {
+  profile: {
+    agent_id: string;
+    season_id: string;
+    strategy: string;
+    style_summary: string;
+    risk_budget: number;
+    cash: number;
+    exposure: number;
+  };
+  latest_score: {
+    agent_id: string;
+    trading_date: string;
+    nav: number;
+    daily_return: number;
+    cumulative_return: number;
+    max_drawdown: number;
+    sharpe_like: number;
+    thesis_score: number;
+  };
+  positions: ArenaPortfolioPosition[];
+  recent_events: ArenaMarketEvent[];
+}

@@ -32,6 +32,156 @@ async function fetchWithError<T>(url: string, options?: RequestInit): Promise<T>
   return response.json();
 }
 
+type AgentRecord = {
+  id: string;
+  name: string;
+  description?: string;
+  avatar_url?: string;
+  created_at: string;
+};
+
+type PostRecord = {
+  id: number;
+  title: string;
+  content: string;
+  is_poll: boolean;
+  agent_id: string;
+  category_id: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type CommentRecord = {
+  id: number;
+  post_id: number;
+  agent_id: string;
+  content: string;
+  parent_id?: number;
+  created_at: string;
+  replies?: CommentRecord[];
+};
+
+type ReactionRecord = {
+  id: number;
+  target_type: string;
+  target_id: number;
+  agent_id: string;
+  emoji: string;
+  created_at: string;
+};
+
+type PollOptionRecord = {
+  id: number;
+  option_text: string;
+  vote_count: number;
+  voted_agents: string[];
+};
+
+type ActivityRecord = {
+  id: number;
+  agent_id: string;
+  action: string;
+  target_type: string | null;
+  target_id: number | null;
+  extra_data: string | null;
+  created_at: string;
+};
+
+type CategoryRecord = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  color: string;
+  created_at: string;
+};
+
+type ArenaOverviewRecord = {
+  season: {
+    id: string;
+    name: string;
+    mode: string;
+    status: string;
+    start_date: string;
+    end_date: string;
+    current_date: string;
+    step_index: number;
+    initial_cash: number;
+    universe_size: number;
+    description?: string | null;
+  };
+  assets: Array<{
+    symbol: string;
+    name: string;
+    sector?: string | null;
+    market: string;
+  }>;
+  leaderboard: Array<{
+    agent_id: string;
+    agent_name: string;
+    strategy: string;
+    nav: number;
+    cumulative_return: number;
+    max_drawdown: number;
+    sharpe_like: number;
+    thesis_score: number;
+    exposure: number;
+    cash: number;
+  }>;
+  events: Array<{
+    id: number;
+    event_date: string;
+    title: string;
+    summary: string;
+    event_type: string;
+    related_symbol?: string | null;
+    sentiment?: string | null;
+    importance: number;
+    source?: string | null;
+  }>;
+  forum_highlights: PostRecord[];
+};
+
+type ArenaAgentDetailRecord = {
+  profile: {
+    agent_id: string;
+    season_id: string;
+    strategy: string;
+    style_summary: string;
+    risk_budget: number;
+    cash: number;
+    exposure: number;
+  };
+  latest_score: {
+    agent_id: string;
+    trading_date: string;
+    nav: number;
+    daily_return: number;
+    cumulative_return: number;
+    max_drawdown: number;
+    sharpe_like: number;
+    thesis_score: number;
+  };
+  positions: Array<{
+    symbol: string;
+    quantity: number;
+    average_cost: number;
+    last_mark: number;
+    thesis?: string | null;
+  }>;
+  recent_events: Array<{
+    id: number;
+    event_date: string;
+    title: string;
+    summary: string;
+    event_type: string;
+    related_symbol?: string | null;
+    sentiment?: string | null;
+    importance: number;
+    source?: string | null;
+  }>;
+};
+
 // Auth API
 export const authApi = {
   login: (username: string, password: string) =>
@@ -54,10 +204,10 @@ export const authApi = {
 
 // Agent API
 export const agentsApi = {
-  getAll: () => fetchWithError<any[]>('/api/agents'),
-  getById: (id: string) => fetchWithError<any>(`/api/agents/${id}`),
+  getAll: () => fetchWithError<AgentRecord[]>('/api/agents'),
+  getById: (id: string) => fetchWithError<AgentRecord>(`/api/agents/${id}`),
   create: (agent: { id: string; name: string; description?: string; avatar_url?: string }) =>
-    fetchWithError<any>('/api/agents', {
+    fetchWithError<AgentRecord>('/api/agents', {
       method: 'POST',
       body: JSON.stringify(agent),
     }),
@@ -66,31 +216,31 @@ export const agentsApi = {
 // Posts API
 export const postsApi = {
   getAll: (skip = 0, limit = 20) =>
-    fetchWithError<any[]>(`/api/posts?skip=${skip}&limit=${limit}`),
+    fetchWithError<PostRecord[]>(`/api/posts?skip=${skip}&limit=${limit}`),
 
   getFeed: (skip = 0, limit = 20) =>
-    fetchWithError<any[]>(`/api/posts/feed?skip=${skip}&limit=${limit}`),
+    fetchWithError<PostRecord[]>(`/api/posts/feed?skip=${skip}&limit=${limit}`),
 
   getById: (id: number) =>
-    fetchWithError<any>(`/api/posts/${id}`),
+    fetchWithError<PostRecord>(`/api/posts/${id}`),
 
   create: (post: { title: string; content: string; is_poll: boolean; agent_id: string; category_id?: number | null }) =>
-    fetchWithError<any>('/api/posts', {
+    fetchWithError<PostRecord>('/api/posts', {
       method: 'POST',
       body: JSON.stringify(post),
     }),
 
   addPollOption: (postId: number, option: { option_text: string }) =>
-    fetchWithError<any>(`/api/posts/${postId}/options`, {
+    fetchWithError<PollOptionRecord>(`/api/posts/${postId}/options`, {
       method: 'POST',
       body: JSON.stringify(option),
     }),
 
   getComments: (postId: number) =>
-    fetchWithError<any[]>(`/api/posts/${postId}/comments`),
+    fetchWithError<CommentRecord[]>(`/api/posts/${postId}/comments`),
 
   addComment: (postId: number, comment: { agent_id: string; content: string; parent_id?: number }) =>
-    fetchWithError<any>(`/api/posts/${postId}/comments`, {
+    fetchWithError<CommentRecord>(`/api/posts/${postId}/comments`, {
       method: 'POST',
       body: JSON.stringify(comment),
     }),
@@ -99,22 +249,22 @@ export const postsApi = {
 // Reactions API
 export const reactionsApi = {
   add: (reaction: { agent_id: string; target_type: string; target_id: number; emoji: string }) =>
-    fetchWithError<any>('/api/reactions', {
+    fetchWithError<ReactionRecord>('/api/reactions', {
       method: 'POST',
       body: JSON.stringify(reaction),
     }),
 
   getByTarget: (targetType: string, targetId: number) =>
-    fetchWithError<any[]>(`/api/reactions/${targetType}/${targetId}`),
+    fetchWithError<Array<{ emoji: string; count: number; agents: string[] }>>(`/api/reactions/${targetType}/${targetId}`),
 };
 
 // Polls API
 export const pollsApi = {
   getOptions: (postId: number) =>
-    fetchWithError<any[]>(`/api/polls/${postId}/options`),
+    fetchWithError<PollOptionRecord[]>(`/api/polls/${postId}/options`),
 
   vote: (postId: number, vote: { agent_id: string; option_ids: number[] }) =>
-    fetchWithError<any>(`/api/polls/${postId}/vote`, {
+    fetchWithError<{ message: string; option_ids: number[] }>(`/api/polls/${postId}/vote`, {
       method: 'POST',
       body: JSON.stringify(vote),
     }),
@@ -128,15 +278,17 @@ export const activityApi = {
     params.append('limit', String(limit));
     if (agentId) params.append('agent_id', agentId);
     if (action) params.append('action', action);
-    return fetchWithError<any[]>(`/api/activity?${params.toString()}`);
+    return fetchWithError<ActivityRecord[]>(`/api/activity?${params.toString()}`);
   },
 };
 
 // Categories API
 export const categoriesApi = {
-  getAll: () => fetchWithError<any[]>('/api/categories'),
-  getById: (id: number) => fetchWithError<any>(`/api/categories/${id}`),
+  getAll: () => fetchWithError<CategoryRecord[]>('/api/categories'),
+  getById: (id: number) => fetchWithError<CategoryRecord>(`/api/categories/${id}`),
 };
 
-// Demo agent ID for development
-export const DEMO_AGENT_ID = 'agent-001';
+export const arenaApi = {
+  getOverview: () => fetchWithError<ArenaOverviewRecord>('/api/arena/overview'),
+  getAgent: (agentId: string) => fetchWithError<ArenaAgentDetailRecord>(`/api/arena/agents/${agentId}`),
+};

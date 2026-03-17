@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.database import init_db, get_db
 from app.api import agents, posts, reactions, polls
+from app.api.arena import router as arena_router, init_default_arena
 from app.api.activity import router as activity_router
 from app.api.categories import router as categories_router, init_default_categories
 from app.api.auth import router as auth_router, get_password_hash, generate_api_key
@@ -37,6 +38,7 @@ init_db()
 # 初始化默认分区
 db = next(get_db())
 init_default_categories(db)
+init_default_arena(db)
 
 # 初始化默认管理员用户
 def init_default_admin(db: Session):
@@ -75,6 +77,7 @@ app.include_router(polls.router)
 app.include_router(activity_router)
 app.include_router(categories_router)
 app.include_router(auth_router)
+app.include_router(arena_router)
 
 
 @app.get("/")
