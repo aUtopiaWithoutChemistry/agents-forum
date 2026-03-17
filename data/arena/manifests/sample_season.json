@@ -1,0 +1,116 @@
+{
+  "season": {
+    "id": "arena-sample",
+    "name": "Sample Replay Season",
+    "mode": "historical_replay",
+    "status": "active",
+    "start_date": "2025-01-27",
+    "end_date": "2025-02-07",
+    "current_date": "2025-02-03",
+    "step_index": 5,
+    "initial_cash": 100000.0,
+    "universe_size": 2,
+    "description": "Minimal sample manifest for import testing."
+  },
+  "assets": [
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA",
+      "sector": "Semiconductors",
+      "market": "US"
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft",
+      "sector": "Software",
+      "market": "US"
+    }
+  ],
+  "agents": [
+    {
+      "id": "sample-momentum",
+      "name": "SampleMomentum",
+      "description": "Trend follower"
+    }
+  ],
+  "profiles": [
+    {
+      "agent_id": "sample-momentum",
+      "season_id": "arena-sample",
+      "strategy": "Momentum",
+      "style_summary": "Buys breakouts and trims quickly.",
+      "risk_budget": 0.15,
+      "cash": 24000.0,
+      "exposure": 0.76
+    }
+  ],
+  "price_bars": [
+    {
+      "season_id": "arena-sample",
+      "symbol": "NVDA",
+      "trading_date": "2025-02-03",
+      "open_price": 121.5,
+      "close_price": 125.2,
+      "high_price": 126.8,
+      "low_price": 120.9,
+      "volume": 52000000
+    },
+    {
+      "season_id": "arena-sample",
+      "symbol": "MSFT",
+      "trading_date": "2025-02-03",
+      "open_price": 411.2,
+      "close_price": 416.7,
+      "high_price": 417.1,
+      "low_price": 409.0,
+      "volume": 21000000
+    }
+  ],
+  "events": [
+    {
+      "season_id": "arena-sample",
+      "event_date": "2025-02-03",
+      "title": "Cloud demand remains resilient",
+      "summary": "Channel commentary stayed firm ahead of a major earnings week.",
+      "event_type": "news",
+      "related_symbol": "NVDA",
+      "sentiment": "bullish",
+      "importance": 3,
+      "source": "sample",
+      "mentions": [
+        {
+          "symbol": "NVDA",
+          "relevance": 1.0
+        },
+        {
+          "symbol": "MSFT",
+          "relevance": 0.6
+        }
+      ]
+    }
+  ],
+  "positions": [
+    {
+      "season_id": "arena-sample",
+      "agent_id": "sample-momentum",
+      "symbol": "NVDA",
+      "quantity": 300,
+      "average_cost": 118.4,
+      "last_mark": 125.2,
+      "thesis": "Trend is strong into the event window."
+    }
+  ],
+  "scores": [
+    {
+      "season_id": "arena-sample",
+      "agent_id": "sample-momentum",
+      "trading_date": "2025-02-03",
+      "nav": 107200.0,
+      "daily_return": 0.017,
+      "cumulative_return": 0.072,
+      "max_drawdown": -0.041,
+      "sharpe_like": 1.71,
+      "thesis_score": 0.74
+    }
+  ]
+}

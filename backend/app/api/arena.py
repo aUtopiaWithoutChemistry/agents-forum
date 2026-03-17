@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models.models import (
     Agent,
     ArenaAgentProfile,
+    ArenaEventMention,
     ArenaAgentScore,
     ArenaAsset,
     ArenaMarketEvent,
@@ -33,8 +34,20 @@ router = APIRouter(prefix="/api/arena", tags=["arena"])
 DEFAULT_SEASON_ID = "arena-v1"
 
 
+def get_current_season(db: Session) -> ArenaSeason | None:
+    season = (
+        db.query(ArenaSeason)
+        .filter(ArenaSeason.status == "active")
+        .order_by(ArenaSeason.created_at.desc())
+        .first()
+    )
+    if season:
+        return season
+    return db.query(ArenaSeason).order_by(ArenaSeason.created_at.desc()).first()
+
+
 def init_default_arena(db: Session) -> None:
-    season = db.query(ArenaSeason).filter(ArenaSeason.id == DEFAULT_SEASON_ID).first()
+    season = db.query(ArenaSeason).first()
     if season:
         return
 
@@ -174,7 +187,17 @@ def init_default_arena(db: Session) -> None:
         },
     ]
     for event in events:
-        db.add(ArenaMarketEvent(season_id=DEFAULT_SEASON_ID, **event))
+        market_event = ArenaMarketEvent(season_id=DEFAULT_SEASON_ID, **event)
+        db.add(market_event)
+        db.flush()
+        if event["related_symbol"]:
+            db.add(
+                ArenaEventMention(
+                    event_id=market_event.id,
+                    symbol=event["related_symbol"],
+                    relevance=1.0,
+                )
+            )
 
     bars = [
         ("NVDA", 121.5, 125.2, 126.8, 120.9, 52_000_000),
@@ -292,7 +315,7 @@ def init_default_arena(db: Session) -> None:
 
 @router.get("/overview", response_model=ArenaOverviewResponse)
 def get_arena_overview(db: Session = Depends(get_db)):
-    season = db.query(ArenaSeason).filter(ArenaSeason.id == DEFAULT_SEASON_ID).first()
+    season = get_current_season(db)
     if not season:
         raise HTTPException(status_code=404, detail="Arena season not found")
 
@@ -339,19 +362,22 @@ def get_arena_overview(db: Session = Depends(get_db)):
 
 @router.get("/agents/{agent_id}", response_model=ArenaAgentDetailResponse)
 def get_arena_agent(agent_id: str, db: Session = Depends(get_db)):
+    season = get_current_season(db)
+    if not season:
+        raise HTTPException(status_code=404, detail="Arena season not found")
+
     profile = (
         db.query(ArenaAgentProfile)
-        .filter(ArenaAgentProfile.season_id == DEFAULT_SEASON_ID, ArenaAgentProfile.agent_id == agent_id)
+        .filter(ArenaAgentProfile.season_id == season.id, ArenaAgentProfile.agent_id == agent_id)
         .first()
     )
     if not profile:
         raise HTTPException(status_code=404, detail="Arena agent not found")
 
-    season = db.query(ArenaSeason).filter(ArenaSeason.id == DEFAULT_SEASON_ID).first()
     latest_score = (
         db.query(ArenaAgentScore)
         .filter(
-            ArenaAgentScore.season_id == DEFAULT_SEASON_ID,
+            ArenaAgentScore.season_id == season.id,
             ArenaAgentScore.agent_id == agent_id,
             ArenaAgentScore.trading_date == season.current_date,
         )
@@ -362,13 +388,13 @@ def get_arena_agent(agent_id: str, db: Session = Depends(get_db)):
 
     positions = (
         db.query(ArenaPortfolioPosition)
-        .filter(ArenaPortfolioPosition.season_id == DEFAULT_SEASON_ID, ArenaPortfolioPosition.agent_id == agent_id)
+        .filter(ArenaPortfolioPosition.season_id == season.id, ArenaPortfolioPosition.agent_id == agent_id)
         .order_by(ArenaPortfolioPosition.symbol.asc())
         .all()
     )
     recent_events = (
         db.query(ArenaMarketEvent)
-        .filter(ArenaMarketEvent.season_id == DEFAULT_SEASON_ID, ArenaMarketEvent.event_date == season.current_date)
+        .filter(ArenaMarketEvent.season_id == season.id, ArenaMarketEvent.event_date == season.current_date)
         .order_by(ArenaMarketEvent.importance.desc(), ArenaMarketEvent.id.asc())
         .limit(3)
         .all()

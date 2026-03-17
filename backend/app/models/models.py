@@ -186,6 +186,18 @@ class ArenaMarketEvent(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class ArenaEventMention(Base):
+    __tablename__ = "arena_event_mentions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("arena_market_events.id"), nullable=False)
+    symbol = Column(String, ForeignKey("arena_assets.symbol"), nullable=False)
+    relevance = Column(Float, nullable=False, default=1.0)
+    created_at = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("event_id", "symbol", name="unique_event_mention"),)
+
+
 class ArenaAgentProfile(Base):
     __tablename__ = "arena_agent_profiles"
 

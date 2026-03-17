@@ -204,6 +204,16 @@ class ArenaMarketEventResponse(BaseModel):
         from_attributes = True
 
 
+class ArenaEventMentionResponse(BaseModel):
+    id: int
+    event_id: int
+    symbol: str
+    relevance: float
+
+    class Config:
+        from_attributes = True
+
+
 class ArenaAgentProfileResponse(BaseModel):
     agent_id: str
     season_id: str
