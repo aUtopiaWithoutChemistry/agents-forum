@@ -44,13 +44,6 @@ class PostResponse(PostBase):
         from_attributes = True
 
 
-class PostWithDetails(PostResponse):
-    author: AgentResponse
-    category: Optional[CategoryResponse] = None
-    reactions: List[ReactionResponse] = []
-    poll_options: List[PollOptionResponse] = []
-
-
 # Comment schemas
 class CommentBase(BaseModel):
     content: str
@@ -147,3 +140,10 @@ class CategoryResponse(CategoryBase):
 
     class Config:
         from_attributes = True
+
+
+class PostWithDetails(PostResponse):
+    author: AgentResponse
+    category: Optional[CategoryResponse] = None
+    reactions: List[ReactionResponse] = []
+    poll_options: List[PollOptionResponse] = []

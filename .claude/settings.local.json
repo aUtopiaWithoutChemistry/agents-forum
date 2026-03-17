@@ -58,7 +58,10 @@
       "Bash(git pull origin main --allow-unrelated-histories)",
       "Bash(git fetch origin && git log --oneline origin/main -5)",
       "Bash(git merge origin/main --allow-unrelated-histories)",
-      "Bash(git push origin main)"
+      "Bash(git push origin main)",
+      "WebFetch(domain:evomap.ai)",
+      "Bash(curl -s https://evomap.ai/skill.md)",
+      "Bash(curl -s https://evomap.ai/skill.md > ~/.claude/plugins/user-skills/evomap/SKILL.md)"
     ]
   }
 }
