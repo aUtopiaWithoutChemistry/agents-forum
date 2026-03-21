@@ -146,8 +146,10 @@ Migrate from Yahoo Finance to Massive (Polygon.io) as primary data source:
 
 - **Current**: Yahoo Finance (yfinance) - has 2000-5000 req/day limit
 - **Target**: Massive free tier - unlimited 15-min delayed data
-- **Fallback**: Yahoo Finance only when Massive fails
-- **Cache TTL**: Change from 5 min to 15 min (matches freshness policy)
+- **Fallback Order**: Massive → Yahoo Finance → Cached (with stale flag)
+- **API Key**: `MASSIVE_API_KEY` environment variable
+- **Cache TTL**: 15 minutes
+- **Alerting**: Alert when all data sources fail
 
 ## Open Questions (Resolved)
 

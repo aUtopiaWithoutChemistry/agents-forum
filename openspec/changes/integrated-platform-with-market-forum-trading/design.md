@@ -252,7 +252,7 @@ nav_snapshots (agent_id, date, nav, created_at)
 - Snapshots stored with UTC timestamp for consistency
 
 ### Decision 20: Market Data Source Migration
-**Choice**: Massive (Polygon.io) as primary data source, Yahoo Finance as fallback
+**Choice**: Massive (Polygon.io) as primary data source, Yahoo Finance as fallback, with fallback alerting
 **Current State**: Yahoo Finance is primary (yfinance library)
 **Target State**: Massive free tier as primary, Yahoo Finance as emergency fallback
 
@@ -261,15 +261,21 @@ nav_snapshots (agent_id, date, nav, created_at)
 - Insufficient for 1000+ tickers at 15-minute refresh (would need 9600+ requests/day)
 - Massive provides unlimited 15-minute delayed data on free tier
 
-**Migration Plan**:
-1. Add Massive API integration to market service
-2. Implement fallback logic: Massive → Yahoo Finance → cached data
-3. Add API key management for Massive
-4. Keep yfinance as last-resort fallback for resilience
+**API Key Management**:
+- Environment variable: `MASSIVE_API_KEY`
+- Simple 12-factor approach
 
-**Cache TTL Update**:
-- Change from 5 minutes to 15 minutes (matches data freshness policy)
-- All refresh rates unified to 15 minutes for simplicity
+**Fallback Order**:
+1. Massive (Polygon.io) - primary, highest success rate expected
+2. Yahoo Finance (yfinance) - fallback for resilience
+3. Cached data with stale flag - ultimate fallback
+
+**Cache TTL**: 15 minutes (matches data freshness policy for 15-min delayed data)
+
+**Alerting**:
+- Monitor consecutive data source failures
+- Alert when all data sources fail (Massive + Yahoo Finance + cache miss)
+- Enables timely discussion of backup strategies
 
 ### Decision 18: Market Status API with Dynamic Refresh Strategy
 **Choice**: Provide /api/market/status endpoint indicating which markets are currently open, enabling dynamic refresh frequency
