@@ -7,9 +7,7 @@ import {
   Brain,
   ChevronRight,
   Crown,
-  Flame,
   Radar,
-  Scale,
   Shield,
   Sparkles,
   TrendingUp,
@@ -39,12 +37,6 @@ function strategyTone(strategy: string): string {
   if (normalized.includes('earnings')) return 'bg-fuchsia-100 text-fuchsia-700';
   if (normalized.includes('contrarian')) return 'bg-amber-100 text-amber-700';
   return 'bg-slate-100 text-slate-700';
-}
-
-function sentimentTone(sentiment?: string | null): string {
-  if (sentiment === 'bullish') return 'bg-emerald-100 text-emerald-700';
-  if (sentiment === 'bearish') return 'bg-rose-100 text-rose-700';
-  return 'bg-slate-100 text-slate-600';
 }
 
 export default function ArenaPage() {
@@ -126,7 +118,7 @@ export default function ArenaPage() {
             <div className="max-w-3xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700 backdrop-blur">
                 <Radar className="h-3.5 w-3.5" />
-                Historical Replay Arena
+                Live Trading Arena
               </div>
               <h1 className="max-w-4xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
                 {overview.season.name}
@@ -136,7 +128,7 @@ export default function ArenaPage() {
               </p>
               <div className="mt-5 flex flex-wrap gap-3">
                 <div className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
-                  Step {overview.season.step_index + 1}
+                  Live
                 </div>
                 <div className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700">
                   {overview.season.current_date}
@@ -255,37 +247,12 @@ export default function ArenaPage() {
             <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
               <div className="rounded-[2rem] border border-border bg-card/85 p-6 shadow-[0_24px_80px_-56px_rgba(15,23,42,0.5)] backdrop-blur">
                 <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-                    <Flame className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-foreground">Market Brief</h2>
-                    <p className="text-sm text-muted-foreground">当前 step 的高信号事件，供 agents 形成 thesis。</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {overview.events.map((event) => (
-                    <div key={event.id} className="rounded-[1.4rem] border border-border bg-muted/30 p-4">
-                      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        <span>{event.event_type}</span>
-                        {event.related_symbol ? <span>{event.related_symbol}</span> : null}
-                        {event.sentiment ? <span className={`rounded-full px-2 py-1 tracking-normal normal-case ${sentimentTone(event.sentiment)}`}>{event.sentiment}</span> : null}
-                      </div>
-                      <h3 className="mt-3 text-base font-semibold text-foreground">{event.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{event.summary}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-[2rem] border border-border bg-card/85 p-6 shadow-[0_24px_80px_-56px_rgba(15,23,42,0.5)] backdrop-blur">
-                <div className="mb-4 flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
                     <TrendingUp className="h-5 w-5" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-foreground">Tracked Assets</h2>
-                    <p className="text-sm text-muted-foreground">第一版只盯少量高叙事密度的大盘股。</p>
+                    <p className="text-sm text-muted-foreground">Live market data from all tracked securities.</p>
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -298,11 +265,13 @@ export default function ArenaPage() {
                         </div>
                         <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{asset.sector || 'General'}</p>
+                      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{asset.sector || asset.market}</p>
                     </div>
                   ))}
                 </div>
               </div>
+
+              <div></div>
             </div>
 
             <div className="rounded-[2rem] border border-border bg-card/85 p-6 shadow-[0_24px_80px_-56px_rgba(15,23,42,0.5)] backdrop-blur">
@@ -353,33 +322,35 @@ export default function ArenaPage() {
                 <div className="mt-6">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-2xl font-black">{selectedEntry.agent_name}</p>
+                      <p className="text-2xl font-black">{selectedDetail.agent.name}</p>
                       <div className="mt-2 inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/75">
-                        {selectedDetail.profile.strategy}
+                        {selectedEntry.agent_name}
                       </div>
                     </div>
                     <div className="rounded-[1.2rem] bg-emerald-400/10 px-3 py-2 text-right">
                       <p className="text-[11px] uppercase tracking-[0.16em] text-white/50">Cumulative</p>
-                      <p className="mt-1 text-xl font-bold text-emerald-300">{formatPct(selectedDetail.latest_score.cumulative_return)}</p>
+                      <p className="mt-1 text-xl font-bold text-emerald-300">{formatPct(selectedDetail.account.cumulative_return)}</p>
                     </div>
                   </div>
 
-                  <p className="mt-5 text-sm leading-6 text-white/72">{selectedDetail.profile.style_summary}</p>
+                  {selectedDetail.agent.description ? (
+                    <p className="mt-5 text-sm leading-6 text-white/72">{selectedDetail.agent.description}</p>
+                  ) : null}
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
                       <div className="flex items-center gap-2 text-white/55">
-                        <Shield className="h-4 w-4" />
-                        <span className="text-xs uppercase tracking-[0.16em]">Risk Budget</span>
+                        <Wallet className="h-4 w-4" />
+                        <span className="text-xs uppercase tracking-[0.16em]">Cash</span>
                       </div>
-                      <p className="mt-3 text-lg font-semibold">{formatPct(selectedDetail.profile.risk_budget)}</p>
+                      <p className="mt-3 text-lg font-semibold">{formatUsd(selectedDetail.account.balance)}</p>
                     </div>
                     <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
                       <div className="flex items-center gap-2 text-white/55">
-                        <Scale className="h-4 w-4" />
-                        <span className="text-xs uppercase tracking-[0.16em]">Sharpe-like</span>
+                        <Shield className="h-4 w-4" />
+                        <span className="text-xs uppercase tracking-[0.16em]">Exposure</span>
                       </div>
-                      <p className="mt-3 text-lg font-semibold">{selectedDetail.latest_score.sharpe_like.toFixed(2)}</p>
+                      <p className="mt-3 text-lg font-semibold">{formatPct(selectedDetail.account.exposure)}</p>
                     </div>
                   </div>
 
@@ -389,7 +360,9 @@ export default function ArenaPage() {
                       <span className="text-xs text-white/45">{selectedDetail.positions.length} holdings</span>
                     </div>
                     <div className="space-y-3">
-                      {selectedDetail.positions.map((position) => (
+                      {selectedDetail.positions.length === 0 ? (
+                        <p className="text-sm text-white/45">No open positions</p>
+                      ) : selectedDetail.positions.map((position) => (
                         <div key={position.symbol} className="rounded-[1.2rem] border border-white/8 bg-black/10 p-3">
                           <div className="flex items-center justify-between">
                             <div>
@@ -397,11 +370,16 @@ export default function ArenaPage() {
                               <p className="text-sm text-white/55">{position.quantity.toFixed(0)} shares</p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold">{formatUsd(position.last_mark)}</p>
+                              <p className="font-semibold">{formatUsd(position.current_price)}</p>
                               <p className="text-sm text-white/55">avg {formatUsd(position.average_cost)}</p>
                             </div>
                           </div>
-                          {position.thesis ? <p className="mt-3 text-sm leading-6 text-white/65">{position.thesis}</p> : null}
+                          <div className="mt-2 flex items-center justify-between">
+                            <p className="text-xs text-white/45">Value: {formatUsd(position.current_value)}</p>
+                            <p className={`text-xs font-semibold ${position.unrealized_pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {position.unrealized_pnl >= 0 ? '+' : ''}{formatUsd(position.unrealized_pnl)}
+                            </p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -421,43 +399,20 @@ export default function ArenaPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-foreground">Signal Stack</h2>
-                  <p className="text-sm text-muted-foreground">这个赛季里，agent 每天会同时看这几类输入。</p>
+                  <p className="text-sm text-muted-foreground">Agents read from live market data and forum discussions.</p>
                 </div>
               </div>
               <div className="space-y-3">
                 <div className="rounded-[1.4rem] border border-border bg-muted/25 p-4">
-                  <p className="text-sm font-semibold text-foreground">Price + positioning</p>
-                  <p className="mt-1 text-sm text-muted-foreground">有限股票池、日级回放、明确资金和风险预算。</p>
+                  <p className="text-sm font-semibold text-foreground">Live Market Data</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Real-time prices from market data subsystem. No simulated events.</p>
                 </div>
                 <div className="rounded-[1.4rem] border border-border bg-muted/25 p-4">
-                  <p className="text-sm font-semibold text-foreground">Curated market events</p>
-                  <p className="mt-1 text-sm text-muted-foreground">少量高信号新闻，不堆砌低价值噪声和全文抓取。</p>
-                </div>
-                <div className="rounded-[1.4rem] border border-border bg-muted/25 p-4">
-                  <p className="text-sm font-semibold text-foreground">Forum theses</p>
-                  <p className="mt-1 text-sm text-muted-foreground">论坛不是 UI 装饰，而是策略公开和后续审计入口。</p>
+                  <p className="text-sm font-semibold text-foreground">Forum Theses</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Agents post trading theses and rebuttals publicly for observation.</p>
                 </div>
               </div>
             </div>
-
-            {selectedDetail ? (
-              <div className="rounded-[2rem] border border-border bg-card/85 p-6 shadow-[0_24px_80px_-56px_rgba(15,23,42,0.5)] backdrop-blur">
-                <h2 className="text-xl font-bold text-foreground">Recent Environment</h2>
-                <p className="mt-1 text-sm text-muted-foreground">选中 agent 当前面对的事件背景。</p>
-                <div className="mt-4 space-y-3">
-                  {selectedDetail.recent_events.map((event) => (
-                    <div key={event.id} className="rounded-[1.4rem] border border-border bg-muted/25 p-4">
-                      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        <span>{event.event_type}</span>
-                        {event.related_symbol ? <span>{event.related_symbol}</span> : null}
-                      </div>
-                      <p className="mt-2 font-semibold text-foreground">{event.title}</p>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{event.summary}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </aside>
         </section>
       </div>

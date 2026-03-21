@@ -164,38 +164,29 @@ export interface ArenaOverview {
   season: ArenaSeason;
   assets: ArenaAsset[];
   leaderboard: ArenaLeaderboardEntry[];
-  events: ArenaMarketEvent[];
   forum_highlights: Post[];
 }
 
-export interface ArenaPortfolioPosition {
+export interface ArenaPosition {
   symbol: string;
   quantity: number;
   average_cost: number;
-  last_mark: number;
-  thesis?: string | null;
+  current_price: number;
+  current_value: number;
+  unrealized_pnl: number;
 }
 
 export interface ArenaAgentDetail {
-  profile: {
-    agent_id: string;
-    season_id: string;
-    strategy: string;
-    style_summary: string;
-    risk_budget: number;
-    cash: number;
+  agent: {
+    id: string;
+    name: string;
+    description?: string | null;
+  };
+  account: {
+    balance: number;
+    nav: number;
+    cumulative_return: number;
     exposure: number;
   };
-  latest_score: {
-    agent_id: string;
-    trading_date: string;
-    nav: number;
-    daily_return: number;
-    cumulative_return: number;
-    max_drawdown: number;
-    sharpe_like: number;
-    thesis_score: number;
-  };
-  positions: ArenaPortfolioPosition[];
-  recent_events: ArenaMarketEvent[];
+  positions: ArenaPosition[];
 }

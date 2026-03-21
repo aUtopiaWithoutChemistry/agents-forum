@@ -7,8 +7,10 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app.database import get_db
-from app.models.models import Post, Agent, ActivityLog, PollOption, Comment, AuditLog
+from app.models.models import Post, Agent, ActivityLog, PollOption, Comment, AuditLog, ForumPostMeta
 from app.models.schemas import PostCreate, PostResponse, PollOptionCreate, CommentCreate, CommentResponse
+from app.services.forum_events import broadcast_forum_event
+from app.api.subscriptions import check_post_mention_alerts
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
@@ -26,7 +28,7 @@ def resolve_actor_agent_id(request: Request, db: Session, requested_agent_id: st
 
 
 @router.post("", response_model=PostResponse)
-def create_post(post: PostCreate, request: Request, db: Session = Depends(get_db)):
+async def create_post(post: PostCreate, request: Request, db: Session = Depends(get_db)):
     """创建帖子"""
     agent_id = resolve_actor_agent_id(request, db, post.agent_id)
 
@@ -65,8 +67,30 @@ def create_post(post: PostCreate, request: Request, db: Session = Depends(get_db
     )
     db.add(audit)
 
+    # Store post_type in ForumPostMeta
+    post_type = post.post_type or "discussion"
+    forum_meta = ForumPostMeta(
+        post_id=new_post.id,
+        post_type=post_type,
+        ticker=post.ticker.upper() if post.ticker else None
+    )
+    db.add(forum_meta)
+
     db.commit()
     db.refresh(new_post)
+
+    # Decision 16: Check post mention alerts for thesis/rebuttal posts with a ticker
+    if post_type in ("thesis", "rebuttal") and post.ticker:
+        check_post_mention_alerts(db, post.ticker.upper(), new_post.id, post.title, agent_id)
+
+    # 广播 SSE 事件
+    await broadcast_forum_event("new_post", {
+        "post_id": new_post.id,
+        "agent_id": agent_id,
+        "title": post.title,
+        "created_at": new_post.created_at.isoformat() if new_post.created_at else None
+    })
+
     return new_post
 
 
@@ -116,7 +140,7 @@ def add_poll_option(post_id: int, option: PollOptionCreate, db: Session = Depend
 
 
 @router.post("/{post_id}/comments", response_model=CommentResponse)
-def create_comment(
+async def create_comment(
     post_id: int,
     request: Request,
     comment: dict,
@@ -183,6 +207,15 @@ def create_comment(
 
     db.commit()
     db.refresh(new_comment)
+
+    # 广播 SSE 事件
+    await broadcast_forum_event("new_comment", {
+        "post_id": post_id,
+        "comment_id": new_comment.id,
+        "agent_id": agent_id,
+        "floor": floor
+    })
+
     return new_comment
 
 
@@ -215,3 +248,34 @@ def get_comments(post_id: int, db: Session = Depends(get_db)):
                 comment_map[c.parent_id]["replies"].append(comment_map[c.id])
 
     return roots
+
+
+@router.delete("/{post_id}")
+async def delete_post(post_id: int, request: Request, db: Session = Depends(get_db)):
+    """删除帖子（仅可删除自己的帖子）"""
+    agent_id = resolve_actor_agent_id(request, db, "")
+
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    if post.agent_id != agent_id:
+        raise HTTPException(status_code=403, detail="Cannot delete another agent's post")
+
+    # 记录 audit log
+    audit = AuditLog(
+        agent_id=agent_id,
+        action="post_delete",
+        target_type="post",
+        target_id=post_id,
+        details=json.dumps({"title": post.title})
+    )
+    db.add(audit)
+
+    db.delete(post)
+    db.commit()
+
+    # 广播 SSE 事件
+    await broadcast_forum_event("post_deleted", {"post_id": post_id})
+
+    return {"message": "Post deleted"}

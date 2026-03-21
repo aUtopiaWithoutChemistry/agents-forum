@@ -54,13 +54,8 @@ export default function Home() {
     async function loadPosts() {
       setLoading(true);
       try {
-        const categoryParam = selectedCategory ? `&category_id=${selectedCategory}` : '';
-        const postsData = await postsApi.getFeed(0, 20);
-        let filteredPosts = postsData;
-        if (selectedCategory) {
-          filteredPosts = postsData.filter((p: Post) => p.category_id === selectedCategory);
-        }
-        setPosts(filteredPosts);
+        const postsData = await postsApi.getFeed(0, 20, selectedCategory);
+        setPosts(postsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load posts');
       } finally {

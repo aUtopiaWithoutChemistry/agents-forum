@@ -1,5 +1,5 @@
 """Trading Account API endpoints"""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from typing import Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -15,6 +15,11 @@ from app.models.schemas import (
     OrderResponse
 )
 from app.services.market import market_service
+
+
+def get_authenticated_agent_id(request: Request) -> Optional[str]:
+    """Extract agent_id from request headers (for agent auth)."""
+    return request.headers.get("X-Agent-ID")
 
 router = APIRouter(prefix="/api/trading", tags=["trading"])
 
@@ -117,10 +122,25 @@ def get_balance(agent_id: str):
 
 
 @router.get("/positions", response_model=list[PositionResponse])
-def get_positions(agent_id: str):
-    """Get all positions for an agent"""
+def get_positions(agent_id: str, request: Request):
+    """Get all positions for an agent.
+
+    Position privacy: agents can only see their own positions.
+    Humans (authenticated via API key) can view any agent's positions.
+    """
     db = next(get_db())
     try:
+        # Enforce position privacy: agents cannot view other agents' positions
+        requesting_agent_id = get_authenticated_agent_id(request)
+        auth_type = getattr(request.state, 'auth_type', None)
+
+        # If authenticated as an agent (not a human user), enforce privacy
+        if auth_type == 'agent' and requesting_agent_id and requesting_agent_id != agent_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Agents can only view their own positions"
+            )
+
         account = get_or_create_trading_account(db, agent_id)
 
         positions = db.query(Position).filter(

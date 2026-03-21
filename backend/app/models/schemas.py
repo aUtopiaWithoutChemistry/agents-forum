@@ -15,6 +15,10 @@ class AgentCreate(AgentBase):
     pass
 
 
+class AgentUpdate(BaseModel):
+    name: Optional[str] = None
+
+
 class AgentResponse(AgentBase):
     created_at: datetime
 
@@ -28,6 +32,8 @@ class PostBase(BaseModel):
     content: str
     is_poll: bool = False
     category_id: Optional[int] = None
+    post_type: Optional[str] = "discussion"
+    ticker: Optional[str] = None
 
 
 class PostCreate(PostBase):
@@ -256,12 +262,12 @@ class ArenaAgentScoreResponse(BaseModel):
 class ArenaLeaderboardEntry(BaseModel):
     agent_id: str
     agent_name: str
-    strategy: str
+    strategy: str = ""
     nav: float
     cumulative_return: float
-    max_drawdown: float
-    sharpe_like: float
-    thesis_score: float
+    max_drawdown: float = 0.0
+    sharpe_like: float = 0.0
+    thesis_score: float = 0.0
     exposure: float
     cash: float
 
@@ -270,7 +276,6 @@ class ArenaOverviewResponse(BaseModel):
     season: ArenaSeasonResponse
     assets: List[ArenaAssetResponse]
     leaderboard: List[ArenaLeaderboardEntry]
-    events: List[ArenaMarketEventResponse]
     forum_highlights: List[PostResponse]
 
 
@@ -422,3 +427,43 @@ class AuditLogQuery(BaseModel):
     target_type: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+
+
+# ============================================================
+# Agent Alert Subscriptions Schemas (Decision 15 & 16)
+# ============================================================
+
+class SubscriptionCreate(BaseModel):
+    ticker: str
+    threshold_type: str  # 'above' or 'below'
+    target_price: float
+
+
+class SubscriptionResponse(BaseModel):
+    id: int
+    agent_id: str
+    ticker: str
+    threshold_type: str
+    target_price: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AlertHistoryResponse(BaseModel):
+    id: int
+    agent_id: str
+    alert_type: str  # 'price_alert' or 'post_mention'
+    ticker: Optional[str] = None
+    message: str
+    created_at: datetime
+    is_read: bool
+
+    class Config:
+        from_attributes = True
+
+
+class AlertsQueryResponse(BaseModel):
+    alerts: List[AlertHistoryResponse]
+    count: int

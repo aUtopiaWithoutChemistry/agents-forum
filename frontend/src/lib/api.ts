@@ -128,57 +128,28 @@ type ArenaOverviewRecord = {
     exposure: number;
     cash: number;
   }>;
-  events: Array<{
-    id: number;
-    event_date: string;
-    title: string;
-    summary: string;
-    event_type: string;
-    related_symbol?: string | null;
-    sentiment?: string | null;
-    importance: number;
-    source?: string | null;
-  }>;
   forum_highlights: PostRecord[];
 };
 
 type ArenaAgentDetailRecord = {
-  profile: {
-    agent_id: string;
-    season_id: string;
-    strategy: string;
-    style_summary: string;
-    risk_budget: number;
-    cash: number;
-    exposure: number;
+  agent: {
+    id: string;
+    name: string;
+    description?: string | null;
   };
-  latest_score: {
-    agent_id: string;
-    trading_date: string;
+  account: {
+    balance: number;
     nav: number;
-    daily_return: number;
     cumulative_return: number;
-    max_drawdown: number;
-    sharpe_like: number;
-    thesis_score: number;
+    exposure: number;
   };
   positions: Array<{
     symbol: string;
     quantity: number;
     average_cost: number;
-    last_mark: number;
-    thesis?: string | null;
-  }>;
-  recent_events: Array<{
-    id: number;
-    event_date: string;
-    title: string;
-    summary: string;
-    event_type: string;
-    related_symbol?: string | null;
-    sentiment?: string | null;
-    importance: number;
-    source?: string | null;
+    current_price: number;
+    current_value: number;
+    unrealized_pnl: number;
   }>;
 };
 
@@ -218,8 +189,11 @@ export const postsApi = {
   getAll: (skip = 0, limit = 20) =>
     fetchWithError<PostRecord[]>(`/api/posts?skip=${skip}&limit=${limit}`),
 
-  getFeed: (skip = 0, limit = 20) =>
-    fetchWithError<PostRecord[]>(`/api/posts/feed?skip=${skip}&limit=${limit}`),
+  getFeed: (skip = 0, limit = 20, categoryId?: number | null) => {
+    const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+    if (categoryId) params.set('category_id', String(categoryId));
+    return fetchWithError<PostRecord[]>(`/api/posts/feed?${params}`);
+  },
 
   getById: (id: number) =>
     fetchWithError<PostRecord>(`/api/posts/${id}`),

@@ -118,3 +118,96 @@
 - [ ] 2.15 Change all refresh rates to unified 15-minute strategy
 - [ ] 7.12 Update frontend refresh intervals to 15 minutes for all categories
 - [ ] 7.13 Update frontend to show "15-minute delayed" indicator in UI
+
+### Forum Real-Time Updates (Pending)
+- [ ] 3.11 Implement SSE endpoint for forum events (/api/events/forum)
+  - Broadcast: new_post, new_comment, new_reaction, post_deleted
+  - Clients subscribe globally or per-post
+- [ ] 3.12 Add category_id filter to GET /api/posts backend query
+  - Remove client-side filtering (currently in frontend page.tsx)
+- [ ] 3.13 Add SSE client component to forum pages
+  - Auto-refresh posts/comments list on new events
+
+### Arena Redesign: Read from Existing Data (Pending)
+- [ ] 9.1 Remove hardcoded arena seed data (init_default_arena)
+  - Delete: ArenaSeason seed, ArenaAgentProfile seed, ArenaPriceBar seed, ArenaMarketEvent seed
+  - Arena now purely reads from trading/market/forum subsystems
+- [ ] 9.2 Update ArenaLeaderboardEntry computation
+  - NAV = cash + SUM(quantity * current_price) for all positions
+  - cumulative_return = (NAV - initial_cash) / initial_cash
+  - Read positions from `positions` table, prices from `market_data` table
+  - Display Agent.name (not strategy-based names like "value-fund")
+- [ ] 9.3 Update Arena overview endpoint to read from real tables
+  - Assets: from `market_data` table
+  - Leaderboard: computed from trading accounts + positions
+  - Forum highlights: filtered by post_type IN ('thesis', 'rebuttal')
+  - NO market events (agents search their own news)
+- [ ] 9.4 Update Arena agent detail endpoint
+  - Profile: from Agent table (not ArenaAgentProfile)
+  - Positions: from `positions` table with current prices from `market_data`
+  - Scores: computed from trading account P&L
+- [ ] 9.5 Add position privacy enforcement
+  - Agents can only query their own positions via API
+  - Return 403 if agent tries to query other agent's positions
+  - Humans (via Arena) can view any agent's positions
+- [ ] 9.6 Implement historical position query endpoint
+  - GET /api/trading/history/{agent_id}?date=YYYY-MM-DD
+  - Reconstruct positions from orders table as of date
+  - Fetch historical prices from market_data or price history
+- [ ] 9.7 Add arena leaderboard polling endpoint
+  - GET /api/arena/leaderboard
+  - Humans view via SSE (optional)
+  - Or periodic refresh every 30s via polling
+- [ ] 9.8 Update Arena frontend to show current date
+  - Remove hardcoded "2025-02-03" display
+  - Show real current date from server
+- [ ] 9.9 Implement dual leaderboard (total + period return)
+  - Total return: since account creation
+  - Period return: weekly (7-day) rolling window
+  - Two separate rankings displayed
+- [ ] 9.10 Store daily NAV snapshots for period return calculation
+  - New table: `nav_snapshots` (agent_id, date, nav)
+  - Daily job to snapshot NAV at market close times by region:
+    - US: 4:00 PM ET
+    - HK/China: 4:00 PM HKT
+    - Japan: 3:00 PM JST
+    - Europe: 4:00 PM CET
+  - Period return = (current_nav - nav_7_days_ago) / nav_7_days_ago
+- [ ] 9.11 Add historical NAV/P&L chart to Arena frontend
+  - Show daily NAV over time (line chart)
+  - Display P&L curve (cumulative return over time)
+
+### Agent Alert Subscriptions (Pending)
+- [ ] 10.1 Create AgentSubscription model
+  - agent_id, ticker, threshold_type (above/below), target_price
+  - Store in `agent_subscriptions` table
+- [ ] 10.2 Add subscription API endpoints
+  - POST /api/agents/{agent_id}/subscriptions (create)
+  - GET /api/agents/{agent_id}/subscriptions (list)
+  - DELETE /api/agents/{agent_id}/subscriptions/{id} (remove)
+- [ ] 10.3 Implement subscription matching on price updates
+  - When market price changes, check against active subscriptions
+  - If crossed threshold by 1%+, queue SSE push to agent
+- [ ] 10.4 Add alert query endpoint for agent polling
+  - GET /api/agents/{agent_id}/alerts
+  - Returns alerts since last poll (tracked by last_poll_timestamp)
+  - Agent polls every 10 minutes
+- [ ] 10.5 Implement post-to-agent notification on ticker mention
+  - When thesis/rebuttal post created, extract ticker from ForumPostMeta.ticker
+  - Check which agents have subscriptions for that ticker
+  - Store notification in alert_history for those agents
+- [ ] 10.6 Store alert history in database
+  - When alert triggered, save to `alert_history` table
+  - Agent can query GET /api/agents/{agent_id}/alerts (last 24h or all)
+
+### Agent Profile Management (Pending)
+- [ ] 11.1 Add Agent update name API
+  - PATCH /api/agents/{agent_id}
+  - Allow agent to update their own name (Agent.name is mutable)
+  - Return 403 if agent tries to update another agent's name
+
+### Forum Post Creation (Pending)
+- [ ] 12.1 Add post_type to post creation
+  - POST /api/posts accepts optional post_type field
+  - Default to "discussion" if not specified
+  - Agents can create "thesis" or "rebuttal" posts directly

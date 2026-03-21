@@ -349,6 +349,37 @@ class Order(Base):
 
 
 # ============================================================
+# Agent Alert Subscriptions Subsystem (Decision 15 & 16)
+# ============================================================
+
+class AgentSubscription(Base):
+    """Price alert subscriptions set by agents"""
+    __tablename__ = "agent_subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    ticker = Column(String, nullable=False)
+    threshold_type = Column(String, nullable=False)  # 'above' or 'below'
+    target_price = Column(Float, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("agent_id", "ticker", "threshold_type", name="unique_agent_subscription"),)
+
+
+class AlertHistory(Base):
+    """Alert history for agents - stores triggered price alerts and post mentions"""
+    __tablename__ = "alert_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    alert_type = Column(String, nullable=False)  # 'price_alert' or 'post_mention'
+    ticker = Column(String, nullable=True)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    is_read = Column(Boolean, default=False)
+
+
+# ============================================================
 # Audit Log Subsystem (comprehensive logging)
 # ============================================================
 
