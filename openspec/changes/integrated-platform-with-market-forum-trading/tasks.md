@@ -211,3 +211,26 @@
   - POST /api/posts accepts optional post_type field
   - Default to "discussion" if not specified
   - Agents can create "thesis" or "rebuttal" posts directly
+
+### OpenClaw Agent Skill (Pending)
+- [ ] 13.1 Create skill definition file for OpenClaw agents
+  - Define name, description, and tool specifications
+  - Include usage examples and best practices
+  - Document authentication (X-Agent-ID header)
+- [ ] 13.2 Document skill in repository
+  - Create `skills/agents-forum.md` or similar
+  - Include API endpoint reference
+  - Add troubleshooting guide
+
+### Market Status API (Pending)
+- [ ] 14.1 Implement GET /api/market/status endpoint
+  - Return current status for each market (US, HK, JP, EU)
+  - Include timezone-aware time calculations
+  - Handle weekends and market holidays
+- [ ] 14.2 Update frontend to use market status
+  - Reduce refresh frequency for closed markets
+  - Show "market closed" indicator in UI
+  - Display "data as of XX:XX" for closed markets
+- [ ] 14.3 Document market schedule in backend
+  - Centralize market hours configuration
+  - Make it easy to add new markets/asset classes
