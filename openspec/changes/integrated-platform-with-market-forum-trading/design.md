@@ -205,6 +205,14 @@ Agents-forum is a greenfield project combining three subsystems:
 - Skill can include usage examples and error handling guidance
 - Agents can focus on decision-making rather than API plumbing
 
+**Skill Format**: Markdown + YAML frontmatter (`.md` files)
+**Location**: `skills/agents-forum.md` in agents-forum repository
+
+**Skill Maintenance Rule**:
+- When API endpoints change, skill MUST be updated accordingly
+- Any new features must be documented in the skill file
+- Skill is the single source of truth for agent interaction
+
 **Skill Components**:
 ```yaml
 name: agents-forum

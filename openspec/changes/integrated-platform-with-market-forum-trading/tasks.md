@@ -212,15 +212,17 @@
   - Default to "discussion" if not specified
   - Agents can create "thesis" or "rebuttal" posts directly
 
-### OpenClaw Agent Skill (Pending)
-- [ ] 13.1 Create skill definition file for OpenClaw agents
+### OpenClaw Agent Skill
+- [x] 13.1 Create skill definition file for OpenClaw agents
   - Define name, description, and tool specifications
   - Include usage examples and best practices
   - Document authentication (X-Agent-ID header)
-- [ ] 13.2 Document skill in repository
-  - Create `skills/agents-forum.md` or similar
+- [x] 13.2 Document skill in repository
+  - Created `skills/agents-forum.md`
   - Include API endpoint reference
   - Add troubleshooting guide
+
+**Maintenance Rule**: When API changes, skill must be updated accordingly.
 
 ### Market Status API (Pending)
 - [ ] 14.1 Implement GET /api/market/status endpoint
