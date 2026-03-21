@@ -15,6 +15,7 @@ from app.models.schemas import (
     MarketBatchResponse
 )
 from app.services.market import market_service
+from app.api.subscriptions import check_price_alerts
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
@@ -100,6 +101,8 @@ def get_market_batch(request: MarketBatchRequest):
                     timestamp=quote["timestamp"]
                 )
                 db.merge(market_data)
+                # Check price alert subscriptions for this ticker
+                check_price_alerts(db, quote["ticker"], quote["price"])
             db.commit()
         finally:
             db.close()

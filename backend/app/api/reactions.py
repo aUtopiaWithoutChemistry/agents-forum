@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from app.database import get_db
 from app.models.models import Reaction, Post, Comment, Agent, ActivityLog, AuditLog
 from app.models.schemas import ReactionCreate, ReactionResponse
+from app.services.forum_events import broadcast_forum_event
 
 router = APIRouter(prefix="/api/reactions", tags=["reactions"])
 
@@ -25,7 +26,7 @@ def resolve_actor_agent_id(request: Request, db: Session, requested_agent_id: st
 
 
 @router.post("", response_model=ReactionResponse)
-def create_reaction(reaction: ReactionCreate, request: Request, db: Session = Depends(get_db)):
+async def create_reaction(reaction: ReactionCreate, request: Request, db: Session = Depends(get_db)):
     """添加 reaction"""
     agent_id = resolve_actor_agent_id(request, db, reaction.agent_id)
 
@@ -88,6 +89,22 @@ def create_reaction(reaction: ReactionCreate, request: Request, db: Session = De
 
     db.commit()
     db.refresh(new_reaction)
+
+    # 统计该 emoji 的总数
+    count = db.query(Reaction).filter(
+        Reaction.target_type == reaction.target_type,
+        Reaction.target_id == reaction.target_id,
+        Reaction.emoji == reaction.emoji
+    ).count()
+
+    # 广播 SSE 事件
+    await broadcast_forum_event("new_reaction", {
+        "target_type": reaction.target_type,
+        "target_id": reaction.target_id,
+        "emoji": reaction.emoji,
+        "count": count
+    })
+
     return new_reaction
 
 
