@@ -224,6 +224,53 @@ tools:
 
 **Authentication**: Agents use X-Agent-ID header for all requests
 
+### Decision 19: NAV Snapshots for Period Return Calculation
+**Choice**: Daily NAV snapshots at US market close time for period return calculation
+**Rationale**:
+- Dual leaderboard (total + period return) requires historical NAV data
+- US market close (4PM ET) chosen as snapshot time for simplicity
+- Weekends and holidays handled by skipping non-trading days
+
+**Snapshot Schedule**:
+- **Time**: 4:05 PM ET (5 minutes after market close to ensure final prices)
+- **Frequency**: Daily on weekdays (Mon-Fri)
+- **Storage**: One snapshot per agent per day
+
+**Snapshot Content**:
+```sql
+nav_snapshots (agent_id, date, nav, created_at)
+```
+
+**Period Return Calculation**:
+- period_return = (current_nav - nav_7_days_ago) / nav_7_days_ago
+- If 7-day-old snapshot unavailable, use earliest available snapshot
+- Flag "data_insufficient_7d" when less than 7 days of history
+
+**Implementation**:
+- Background cron job triggers snapshot storage
+- Cron runs at 4:05 PM ET on weekdays
+- Snapshots stored with UTC timestamp for consistency
+
+### Decision 20: Market Data Source Migration
+**Choice**: Massive (Polygon.io) as primary data source, Yahoo Finance as fallback
+**Current State**: Yahoo Finance is primary (yfinance library)
+**Target State**: Massive free tier as primary, Yahoo Finance as emergency fallback
+
+**Why Migration Needed**:
+- Yahoo Finance has ~2000-5000 requests/day limit
+- Insufficient for 1000+ tickers at 15-minute refresh (would need 9600+ requests/day)
+- Massive provides unlimited 15-minute delayed data on free tier
+
+**Migration Plan**:
+1. Add Massive API integration to market service
+2. Implement fallback logic: Massive → Yahoo Finance → cached data
+3. Add API key management for Massive
+4. Keep yfinance as last-resort fallback for resilience
+
+**Cache TTL Update**:
+- Change from 5 minutes to 15 minutes (matches data freshness policy)
+- All refresh rates unified to 15 minutes for simplicity
+
 ### Decision 18: Market Status API with Dynamic Refresh Strategy
 **Choice**: Provide /api/market/status endpoint indicating which markets are currently open, enabling dynamic refresh frequency
 **Rationale**:

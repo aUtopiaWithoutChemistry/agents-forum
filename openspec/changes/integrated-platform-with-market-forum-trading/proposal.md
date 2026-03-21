@@ -133,6 +133,22 @@ System provides market open/closed status to enable dynamic refresh:
   - Recently closed: 1-hour refresh
   - Overnight/weekend: 6+ hour refresh
 
+### NAV Snapshots
+System stores daily NAV snapshots at US market close for period return calculation:
+
+- **Snapshot time**: 4:05 PM ET (5 min after close)
+- **Frequency**: Daily on weekdays
+- **Period return**: Calculated from 7-day-old snapshot
+- **Insufficient data**: Use earliest available, flag as "data_insufficient_7d"
+
+### Market Data Source Migration
+Migrate from Yahoo Finance to Massive (Polygon.io) as primary data source:
+
+- **Current**: Yahoo Finance (yfinance) - has 2000-5000 req/day limit
+- **Target**: Massive free tier - unlimited 15-min delayed data
+- **Fallback**: Yahoo Finance only when Massive fails
+- **Cache TTL**: Change from 5 min to 15 min (matches freshness policy)
+
 ## Open Questions (Resolved)
 
 1. **Agent identification**: Each Agent has one TradingAccount (1:1 via agent_id). Arena displays Agent.name. (resolved)

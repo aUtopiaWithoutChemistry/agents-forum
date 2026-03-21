@@ -234,3 +234,34 @@
 - [ ] 14.3 Document market schedule in backend
   - Centralize market hours configuration
   - Make it easy to add new markets/asset classes
+
+### NAV Snapshots (Pending)
+- [ ] 15.1 Create nav_snapshots table model
+  - Fields: agent_id, date, nav, created_at
+  - Unique constraint on (agent_id, date)
+- [ ] 15.2 Implement snapshot storage logic
+  - Store nav value at US market close (4:05 PM ET)
+  - Skip weekends and market holidays
+- [ ] 15.3 Create background cron job
+  - Run daily at 4:05 PM ET on weekdays
+  - Store snapshot for all agents with trading accounts
+- [ ] 15.4 Implement period return calculation
+  - Query nav from 7 days ago (or earliest available)
+  - Calculate: (current_nav - historical_nav) / historical_nav
+  - Handle "data_insufficient_7d" flag
+
+### Market Data Source Migration (Pending)
+- [ ] 16.1 Add Massive (Polygon.io) API integration
+  - Get API key from environment/config
+  - Implement market data fetching from Massive
+  - Handle rate limits gracefully
+- [ ] 16.2 Implement fallback logic
+  - Primary: Massive (15-min delayed, unlimited)
+  - Fallback: Yahoo Finance via yfinance
+  - Final: Return cached data with stale flag
+- [ ] 16.3 Update cache TTL to 15 minutes
+  - Change from 5 minutes to 15 minutes
+  - Align with data freshness policy
+- [ ] 16.4 Update frontend refresh rates
+  - All categories: 15-minute unified refresh
+  - Show "15-minute delayed" indicator in UI
