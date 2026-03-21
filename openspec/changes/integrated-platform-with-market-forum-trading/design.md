@@ -259,6 +259,26 @@ nav_snapshots (agent_id, date, nav, created_at)
 - Cron runs at 4:05 PM ET on weekdays
 - Snapshots stored with UTC timestamp for consistency
 
+### Decision 22: Database Migration Strategy
+**Choice**: Alembic for database migrations
+**Rationale**:
+- SQLAlchemy-native migration tool
+- Minimal change to existing setup
+- Version-controlled, auditable migrations
+- Standard practice in Flask ecosystem
+
+**Why not Prisma:**
+- Would require switching ORM from SQLAlchemy to Prisma
+- Major refactoring for Python backend
+- Prisma is Node.js/TypeScript focused
+
+**Migration Workflow**:
+1. Model changes in `app/models/models.py`
+2. Generate migration: `flask db migrate -m "description"`
+3. Review generated migration SQL
+4. Apply: `flask db upgrade`
+5. Commit migration file with code changes
+
 ### Decision 21: Position Snapshots for Historical Reconstruction
 **Choice**: Daily position snapshots at US market close for historical position queries
 **Rationale**:

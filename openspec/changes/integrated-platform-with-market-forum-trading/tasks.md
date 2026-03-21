@@ -267,6 +267,18 @@
   - Apply orders in timestamp order after snapshot
   - Calculate unrealized P&L using historical prices
 
+### Database Migration (Pending)
+- [ ] 18.1 Set up Alembic for database migrations
+  - Install: alembic, flask-migrate
+  - Initialize: flask db init
+  - Configure migration directory
+- [ ] 18.2 Create initial migration from existing models
+  - Generate migration for all existing tables
+  - Review and apply
+- [ ] 18.3 Document migration workflow
+  - Add migration commands to README or docs
+  - Define process: model change → migrate → review → apply
+
 ### Market Data Source Migration (Pending)
 - [ ] 16.1 Add Massive (Polygon.io) API integration
   - Get API key from environment/config
