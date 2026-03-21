@@ -259,6 +259,27 @@ nav_snapshots (agent_id, date, nav, created_at)
 - Cron runs at 4:05 PM ET on weekdays
 - Snapshots stored with UTC timestamp for consistency
 
+### Decision 21: Position Snapshots for Historical Reconstruction
+**Choice**: Daily position snapshots at US market close for historical position queries
+**Rationale**:
+- Arena needs to show historical positions at any point in time
+- Reconstruction: nearest snapshot + subsequent orders
+- Daily snapshots balance accuracy and storage
+
+**Snapshot Content**:
+```sql
+position_snapshots (agent_id, date, ticker, quantity, average_cost, created_at)
+```
+
+**Snapshot Schedule**:
+- **Time**: 4:05 PM ET (with NAV snapshot)
+- **Frequency**: Daily on weekdays
+
+**Reconstruction Logic**:
+1. Get position_snapshot for target date (or nearest prior)
+2. Apply all orders after snapshot date (by timestamp)
+3. Return reconstructed position state
+
 ### Decision 20: Market Data Source Migration
 **Choice**: Massive (Polygon.io) as primary data source, Yahoo Finance as fallback, with fallback alerting
 **Current State**: Yahoo Finance is primary (yfinance library)

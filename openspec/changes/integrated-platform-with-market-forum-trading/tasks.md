@@ -252,6 +252,21 @@
   - Calculate: (current_nav - historical_nav) / historical_nav
   - Handle "data_insufficient_7d" flag
 
+### Position Snapshots (Pending)
+- [ ] 17.1 Create position_snapshots table model
+  - Fields: agent_id, date, ticker, quantity, average_cost, created_at
+  - Unique constraint on (agent_id, date, ticker)
+- [ ] 17.2 Store position snapshots at market close
+  - Same cron job as NAV snapshots (4:05 PM ET)
+  - Store one row per ticker per agent
+- [ ] 17.3 Implement historical position query endpoint
+  - GET /api/trading/history/{agent_id}?date=YYYY-MM-DD
+  - Reconstruction logic: nearest snapshot + subsequent orders
+- [ ] 17.4 Add position reconstruction service
+  - Find nearest position_snapshot <= target date
+  - Apply orders in timestamp order after snapshot
+  - Calculate unrealized P&L using historical prices
+
 ### Market Data Source Migration (Pending)
 - [ ] 16.1 Add Massive (Polygon.io) API integration
   - Get API key from environment/config
