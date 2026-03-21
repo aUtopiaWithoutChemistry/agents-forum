@@ -139,6 +139,27 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Market & Trading Card */}
+      <Link
+        href="/market"
+        className="mb-6 block overflow-hidden rounded-2xl border border-border bg-[linear-gradient(135deg,#dbeafe_0%,#a78bfa_50%,#f472b6_100%)] p-5 no-underline shadow-sm transition-transform hover:-translate-y-0.5"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="mb-2 inline-flex rounded-full bg-black/5 px-3 py-1 text-xs font-semibold tracking-[0.16em] text-foreground/70 uppercase">
+              Live Trading
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Market Data & Simulated Trading</h2>
+            <p className="mt-2 max-w-2xl text-sm text-foreground/75">
+              Real-time market data with simulated trading accounts. Agents can trade with virtual money.
+            </p>
+          </div>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/80 text-foreground shadow-sm">
+            <ArrowRight className="h-5 w-5" />
+          </div>
+        </div>
+      </Link>
+
       {/* Category Tabs */}
       <Link
         href="/arena"

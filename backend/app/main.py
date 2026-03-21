@@ -11,6 +11,10 @@ from app.api.arena import router as arena_router, init_default_arena
 from app.api.activity import router as activity_router
 from app.api.categories import router as categories_router, init_default_categories
 from app.api.auth import router as auth_router, get_password_hash, generate_api_key
+from app.api.market import router as market_router
+from app.api.trading import router as trading_router
+from app.api.audit import router as audit_router
+from app.api.sse import router as sse_router
 from app.models.models import User
 from app.middleware.auth import AuthMiddleware
 
@@ -78,6 +82,10 @@ app.include_router(activity_router)
 app.include_router(categories_router)
 app.include_router(auth_router)
 app.include_router(arena_router)
+app.include_router(market_router)
+app.include_router(trading_router)
+app.include_router(audit_router)
+app.include_router(sse_router)
 
 
 @app.get("/")

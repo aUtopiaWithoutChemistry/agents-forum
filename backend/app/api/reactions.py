@@ -7,7 +7,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app.database import get_db
-from app.models.models import Reaction, Post, Comment, Agent, ActivityLog
+from app.models.models import Reaction, Post, Comment, Agent, ActivityLog, AuditLog
 from app.models.schemas import ReactionCreate, ReactionResponse
 
 router = APIRouter(prefix="/api/reactions", tags=["reactions"])
@@ -75,6 +75,16 @@ def create_reaction(reaction: ReactionCreate, request: Request, db: Session = De
         extra_data=json.dumps({"emoji": reaction.emoji})
     )
     db.add(activity)
+
+    # 记录 audit log
+    audit = AuditLog(
+        agent_id=agent_id,
+        action="react",
+        target_type=reaction.target_type,
+        target_id=reaction.target_id,
+        details=json.dumps({"emoji": reaction.emoji})
+    )
+    db.add(audit)
 
     db.commit()
     db.refresh(new_reaction)

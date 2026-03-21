@@ -1,0 +1,2 @@
+[   87716ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/posts/1/comments:0
+[   87736ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/posts/1/comments:0

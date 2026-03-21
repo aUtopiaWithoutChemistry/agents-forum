@@ -59,6 +59,7 @@ class CommentResponse(CommentBase):
     id: int
     post_id: int
     agent_id: str
+    floor: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -278,3 +279,146 @@ class ArenaAgentDetailResponse(BaseModel):
     latest_score: ArenaAgentScoreResponse
     positions: List[ArenaPortfolioPositionResponse]
     recent_events: List[ArenaMarketEventResponse]
+
+
+# ============================================================
+# Market Data Subsystem Schemas
+# ============================================================
+
+class MarketDataResponse(BaseModel):
+    ticker: str
+    name: str
+    market_type: str
+    price: float
+    change: Optional[float] = None
+    changePercent: Optional[float] = None
+    volume: float
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MarketAlertCreate(BaseModel):
+    agent_id: str
+    ticker: str
+    target_price: float
+    direction: str  # 'above' or 'below'
+
+
+class MarketAlertResponse(BaseModel):
+    id: int
+    agent_id: str
+    ticker: str
+    target_price: float
+    direction: str
+    is_triggered: bool
+    created_at: datetime
+    triggered_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MarketHistoryResponse(BaseModel):
+    ticker: str
+    name: str
+    history: List[dict]  # List of {date, open, high, low, close, volume}
+
+
+class MarketBatchRequest(BaseModel):
+    tickers: List[str]
+    force_refresh: bool = False
+
+
+class MarketBatchResponse(BaseModel):
+    data: List[MarketDataResponse]
+    cached_count: int
+    fresh_count: int
+    timestamp: datetime
+
+
+# ============================================================
+# Trading Account Subsystem Schemas
+# ============================================================
+
+class TradingAccountResponse(BaseModel):
+    id: int
+    agent_id: str
+    balance: float
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PositionResponse(BaseModel):
+    id: int
+    ticker: str
+    quantity: float
+    average_cost: float
+    current_value: Optional[float] = None  # Calculated from market price
+    unrealized_pnl: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class BalanceResponse(BaseModel):
+    agent_id: str
+    balance: float
+    positions: List[PositionResponse]
+    total_value: float  # balance + sum of all positions
+
+
+# ============================================================
+# Order Execution Subsystem Schemas
+# ============================================================
+
+class OrderCreate(BaseModel):
+    agent_id: str
+    ticker: str
+    order_type: str  # 'buy' or 'sell'
+    quantity: float
+
+
+class OrderResponse(BaseModel):
+    id: int
+    account_id: int
+    ticker: str
+    order_type: str
+    quantity: float
+    price: float
+    status: str
+    created_at: datetime
+    executed_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================
+# Audit Log Subsystem Schemas
+# ============================================================
+
+class AuditLogResponse(BaseModel):
+    id: int
+    agent_id: str
+    action: str
+    target_type: Optional[str] = None
+    target_id: Optional[int] = None
+    details: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AuditLogQuery(BaseModel):
+    agent_id: Optional[str] = None
+    action: Optional[str] = None
+    target_type: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None

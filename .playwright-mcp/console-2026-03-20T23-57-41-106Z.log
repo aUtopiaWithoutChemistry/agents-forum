@@ -1,0 +1,2 @@
+[    9394ms] [ERROR] Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://react.dev/link/setstate-in-render Router LoginPage LoginPage @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[   39538ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/trading/balance?agent_id=trader3:0

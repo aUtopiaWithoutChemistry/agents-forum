@@ -47,6 +47,7 @@ class Comment(Base):
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
     parent_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
     content = Column(Text, nullable=False)
+    floor = Column(Integer, nullable=True)  # Floor number for direct replies (2, 3, 4...) - None for nested comments
     created_at = Column(DateTime, server_default=func.now())
 
     post = relationship("Post", back_populates="comments")
@@ -255,4 +256,110 @@ class ForumPostMeta(Base):
     confidence = Column(Float, nullable=True)
     horizon = Column(String, nullable=True)
     structured_thesis = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+# ============================================================
+# Market Data Subsystem
+# ============================================================
+
+class MarketData(Base):
+    """Real-time market data for tickers"""
+    __tablename__ = "market_data"
+
+    ticker = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    market_type = Column(String, nullable=False, default="stock")  # stock, ETF, crypto, etc.
+    price = Column(Float, nullable=False)
+    volume = Column(Float, nullable=False, default=0)
+    timestamp = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class MarketAlert(Base):
+    """Price alerts set by agents"""
+    __tablename__ = "market_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    ticker = Column(String, nullable=False)
+    target_price = Column(Float, nullable=False)
+    direction = Column(String, nullable=False)  # 'above' or 'below'
+    is_triggered = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())
+    triggered_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (UniqueConstraint("agent_id", "ticker", "direction", name="unique_market_alert"),)
+
+
+# ============================================================
+# Trading Account Subsystem
+# ============================================================
+
+class TradingAccount(Base):
+    """Trading account for agents with real-time market trading"""
+    __tablename__ = "trading_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False, unique=True)
+    balance = Column(Float, nullable=False, default=100000.0)  # Starting balance
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    positions = relationship("Position", back_populates="account", cascade="all, delete-orphan")
+    orders = relationship("Order", back_populates="account", cascade="all, delete-orphan")
+
+
+class Position(Base):
+    """Holdings in a trading account"""
+    __tablename__ = "positions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("trading_accounts.id"), nullable=False)
+    ticker = Column(String, nullable=False)
+    quantity = Column(Float, nullable=False, default=0)
+    average_cost = Column(Float, nullable=False, default=0)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    account = relationship("TradingAccount", back_populates="positions")
+
+    __table_args__ = (UniqueConstraint("account_id", "ticker", name="unique_position"),)
+
+
+# ============================================================
+# Order Execution Subsystem
+# ============================================================
+
+class Order(Base):
+    """Order with state machine: Create → Executed → Closed"""
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("trading_accounts.id"), nullable=False)
+    ticker = Column(String, nullable=False)
+    order_type = Column(String, nullable=False)  # 'buy' or 'sell'
+    quantity = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)  # Price at execution time
+    status = Column(String, nullable=False, default="created")  # created, executed, closed
+    created_at = Column(DateTime, server_default=func.now())
+    executed_at = Column(DateTime, nullable=True)
+    closed_at = Column(DateTime, nullable=True)
+
+    account = relationship("TradingAccount", back_populates="orders")
+
+
+# ============================================================
+# Audit Log Subsystem (comprehensive logging)
+# ============================================================
+
+class AuditLog(Base):
+    """Immutable audit log for all agent actions"""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(String, nullable=False)
+    action = Column(String, nullable=False)  # post_create, order_execute, vote, etc.
+    target_type = Column(String, nullable=True)  # post, comment, order, etc.
+    target_id = Column(Integer, nullable=True)
+    details = Column(Text, nullable=True)  # JSON with additional details
     created_at = Column(DateTime, server_default=func.now())

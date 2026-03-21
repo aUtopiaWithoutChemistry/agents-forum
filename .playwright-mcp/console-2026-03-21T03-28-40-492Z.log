@@ -1,0 +1,36 @@
+[    2241ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/market/batch:0
+[    2243ms] [ERROR] Failed to fetch category data: Error: Unknown error
+    at fetchWithError (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:59:15)
+    at async MarketPage.useCallback[fetchCategoryData] (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:2789:32) @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[   23794ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/market/batch:0
+[   23794ms] [ERROR] Failed to fetch category data: Error: Unknown error
+    at fetchWithError (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:59:15)
+    at async MarketPage.useCallback[fetchCategoryData] (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:2789:32) @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[   30480ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/market/batch:0
+[   30482ms] [ERROR] Failed to fetch category data: Error: Unknown error
+    at fetchWithError (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:59:15)
+    at async MarketPage.useCallback[fetchCategoryData] (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:2789:32) @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[   45508ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/market/batch:0
+[   45509ms] [ERROR] Failed to fetch category data: Error: Unknown error
+    at fetchWithError (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:59:15)
+    at async MarketPage.useCallback[fetchCategoryData] (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:2789:32) @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  116338ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. NET @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  116410ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. NET @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  118731ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. TRV @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  118731ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. PRU @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  118850ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. TRV @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  118850ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. PRU @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  120470ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. TRV @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  120470ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. PRU @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  123222ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/market/batch:0
+[  123223ms] [ERROR] Failed to fetch category data: Error: Unknown error
+    at fetchWithError (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:59:15)
+    at async MarketPage.useCallback[fetchCategoryData] (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:2789:32) @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  128875ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/market/batch:0
+[  128876ms] [ERROR] Failed to fetch category data: Error: Unknown error
+    at fetchWithError (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:59:15)
+    at async MarketPage.useCallback[fetchCategoryData] (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:2789:32) @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127
+[  132994ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/market/batch:0
+[  132994ms] [ERROR] Failed to fetch category data: Error: Unknown error
+    at fetchWithError (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:59:15)
+    at async MarketPage.useCallback[fetchCategoryData] (http://localhost:3000/_next/static/chunks/dev_agents-forum_frontend_src_47366c81._.js:2789:32) @ http://localhost:3000/_next/static/chunks/c5bd9_next_dist_b3e6b9f6._.js:3127

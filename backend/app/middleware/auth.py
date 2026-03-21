@@ -19,6 +19,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/health",
         "/docs",
         "/openapi.json",
+        "/api/market/batch",
     ]
 
     # 认证相关的路径

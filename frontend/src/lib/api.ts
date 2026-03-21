@@ -292,3 +292,160 @@ export const arenaApi = {
   getOverview: () => fetchWithError<ArenaOverviewRecord>('/api/arena/overview'),
   getAgent: (agentId: string) => fetchWithError<ArenaAgentDetailRecord>(`/api/arena/agents/${agentId}`),
 };
+
+// Market Data API
+type MarketDataRecord = {
+  ticker: string;
+  name: string;
+  market_type: string;
+  price: number;
+  volume: number;
+  timestamp: string;
+  change?: number;
+  changePercent?: number;
+};
+
+type MarketHistoryRecord = {
+  ticker: string;
+  name: string;
+  history: Array<{
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>;
+};
+
+type MarketAlertRecord = {
+  id: number;
+  agent_id: string;
+  ticker: string;
+  target_price: number;
+  direction: string;
+  is_triggered: boolean;
+  created_at: string;
+  triggered_at?: string;
+};
+
+type MarketBatchRecord = {
+  data: MarketDataRecord[];
+  cached_count: number;
+  fresh_count: number;
+  timestamp: string;
+};
+
+export const marketApi = {
+  getQuote: (ticker: string) =>
+    fetchWithError<MarketDataRecord>(`/api/market/${ticker}`),
+
+  getBatch: (tickers: string[], forceRefresh = false) =>
+    fetchWithError<MarketBatchRecord>('/api/market/batch', {
+      method: 'POST',
+      body: JSON.stringify({ tickers, force_refresh: forceRefresh }),
+    }),
+
+  getHistory: (ticker: string, start: string, end: string) =>
+    fetchWithError<MarketHistoryRecord>(`/api/market/${ticker}/history?start=${start}&end=${end}`),
+
+  createAlert: (alert: { agent_id: string; ticker: string; target_price: number; direction: string }) =>
+    fetchWithError<MarketAlertRecord>('/api/market/alerts', {
+      method: 'POST',
+      body: JSON.stringify(alert),
+    }),
+
+  getAlerts: (agentId: string) =>
+    fetchWithError<MarketAlertRecord[]>(`/api/market/alerts?agent_id=${agentId}`),
+};
+
+// Trading API
+type TradingAccountRecord = {
+  id: number;
+  agent_id: string;
+  balance: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type PositionRecord = {
+  id: number;
+  ticker: string;
+  quantity: number;
+  average_cost: number;
+  current_value?: number;
+  unrealized_pnl?: number;
+};
+
+type BalanceRecord = {
+  agent_id: string;
+  balance: number;
+  positions: PositionRecord[];
+  total_value: number;
+};
+
+type OrderRecord = {
+  id: number;
+  account_id: number;
+  ticker: string;
+  order_type: string;
+  quantity: number;
+  price: number;
+  status: string;
+  created_at: string;
+  executed_at?: string;
+  closed_at?: string;
+};
+
+export const tradingApi = {
+  getAccount: (agentId: string) =>
+    fetchWithError<TradingAccountRecord>(`/api/trading/account?agent_id=${agentId}`),
+
+  getBalance: (agentId: string) =>
+    fetchWithError<BalanceRecord>(`/api/trading/balance?agent_id=${agentId}`),
+
+  getPositions: (agentId: string) =>
+    fetchWithError<PositionRecord[]>(`/api/trading/positions?agent_id=${agentId}`),
+
+  getOrders: (agentId: string, status?: string) => {
+    const url = status
+      ? `/api/trading/orders?agent_id=${agentId}&status=${status}`
+      : `/api/trading/orders?agent_id=${agentId}`;
+    return fetchWithError<OrderRecord[]>(url);
+  },
+
+  createOrder: (order: { agent_id: string; ticker: string; order_type: string; quantity: number }) =>
+    fetchWithError<OrderRecord>('/api/trading/order', {
+      method: 'POST',
+      body: JSON.stringify(order),
+    }),
+};
+
+// Audit API
+type AuditLogRecord = {
+  id: number;
+  agent_id: string;
+  action: string;
+  target_type?: string;
+  target_id?: number;
+  details?: string;
+  created_at: string;
+};
+
+export const auditApi = {
+  getLogs: (params?: {
+    agent_id?: string;
+    action?: string;
+    target_type?: string;
+    limit?: number;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.agent_id) searchParams.append('agent_id', params.agent_id);
+    if (params?.action) searchParams.append('action', params.action);
+    if (params?.target_type) searchParams.append('target_type', params.target_type);
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    return fetchWithError<AuditLogRecord[]>(`/api/audit?${searchParams.toString()}`);
+  },
+
+  getActionTypes: () => fetchWithError<string[]>('/api/audit/actions'),
+};

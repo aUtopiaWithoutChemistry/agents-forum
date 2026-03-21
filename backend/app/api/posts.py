@@ -7,7 +7,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app.database import get_db
-from app.models.models import Post, Agent, ActivityLog, PollOption, Comment
+from app.models.models import Post, Agent, ActivityLog, PollOption, Comment, AuditLog
 from app.models.schemas import PostCreate, PostResponse, PollOptionCreate, CommentCreate, CommentResponse
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
@@ -54,6 +54,16 @@ def create_post(post: PostCreate, request: Request, db: Session = Depends(get_db
         extra_data=json.dumps({"title": post.title})
     )
     db.add(activity)
+
+    # 记录 audit log
+    audit = AuditLog(
+        agent_id=agent_id,
+        action="post_create",
+        target_type="post",
+        target_id=new_post.id,
+        details=json.dumps({"title": post.title})
+    )
+    db.add(audit)
 
     db.commit()
     db.refresh(new_post)
@@ -112,7 +122,7 @@ def create_comment(
     comment: dict,
     db: Session = Depends(get_db)
 ):
-    """添加评论"""
+    """添加评论（楼层回复或嵌套评论）"""
     # 验证帖子存在
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
@@ -131,11 +141,22 @@ def create_comment(
         if not parent:
             raise HTTPException(status_code=404, detail="Parent comment not found")
 
+    # 计算楼层号（仅对直接回复生效）
+    floor = None
+    if not comment.get("parent_id"):
+        # 楼层 = 直接回复数 + 2（1楼是原帖，2楼是第一个回复）
+        direct_reply_count = db.query(Comment).filter(
+            Comment.post_id == post_id,
+            Comment.parent_id == None
+        ).count()
+        floor = direct_reply_count + 2
+
     new_comment = Comment(
         post_id=post_id,
         agent_id=agent_id,
         content=comment["content"],
-        parent_id=comment.get("parent_id")
+        parent_id=comment.get("parent_id"),
+        floor=floor
     )
     db.add(new_comment)
     db.flush()
@@ -146,9 +167,19 @@ def create_comment(
         action="comment",
         target_type="post",
         target_id=post_id,
-        extra_data=json.dumps({"comment_id": new_comment.id, "parent_id": comment.get("parent_id")})
+        extra_data=json.dumps({"comment_id": new_comment.id, "parent_id": comment.get("parent_id"), "floor": floor})
     )
     db.add(activity)
+
+    # 记录 audit log
+    audit = AuditLog(
+        agent_id=agent_id,
+        action="comment",
+        target_type="post",
+        target_id=post_id,
+        details=json.dumps({"comment_id": new_comment.id, "floor": floor})
+    )
+    db.add(audit)
 
     db.commit()
     db.refresh(new_comment)
@@ -157,15 +188,24 @@ def create_comment(
 
 @router.get("/{post_id}/comments")
 def get_comments(post_id: int, db: Session = Depends(get_db)):
-    """获取帖子评论（树形结构）"""
-    comments = db.query(Comment).filter(Comment.post_id == post_id).all()
+    """获取帖子评论（树形结构，带楼层号）"""
+    comments = db.query(Comment).filter(Comment.post_id == post_id).order_by(Comment.created_at).all()
 
     # 构建树形结构
     comment_map = {}
     roots = []
 
     for c in comments:
-        comment_map[c.id] = {**c.__dict__, "replies": []}
+        comment_map[c.id] = {
+            "id": c.id,
+            "post_id": c.post_id,
+            "agent_id": c.agent_id,
+            "parent_id": c.parent_id,
+            "content": c.content,
+            "floor": c.floor,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "replies": []
+        }
 
     for c in comments:
         if c.parent_id is None:
