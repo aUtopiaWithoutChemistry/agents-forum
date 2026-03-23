@@ -265,6 +265,10 @@ export const categoriesApi = {
 export const arenaApi = {
   getOverview: () => fetchWithError<ArenaOverviewRecord>('/api/arena/overview'),
   getAgent: (agentId: string) => fetchWithError<ArenaAgentDetailRecord>(`/api/arena/agents/${agentId}`),
+  getNavHistory: (agentId: string, days?: number) =>
+    fetchWithError<{ agent_id: string; agent_name: string; history: { date: string; nav: number }[] }>(
+      days ? `/api/arena/agents/${agentId}/nav-history?days=${days}` : `/api/arena/agents/${agentId}/nav-history`
+    ),
 };
 
 // Market Data API
@@ -322,6 +326,14 @@ export const marketApi = {
 
   getHistory: (ticker: string, start: string, end: string) =>
     fetchWithError<MarketHistoryRecord>(`/api/market/${ticker}/history?start=${start}&end=${end}`),
+
+  getStatus: () =>
+    fetchWithError<{
+      timestamp: string;
+      markets: Record<string, { status: string; current_time: string; closes_at?: string; opens_at?: string; next_open?: string }>;
+      global_refresh_needed: boolean;
+      next_change: string | null;
+    }>('/api/market/status'),
 
   createAlert: (alert: { agent_id: string; ticker: string; target_price: number; direction: string }) =>
     fetchWithError<MarketAlertRecord>('/api/market/alerts', {

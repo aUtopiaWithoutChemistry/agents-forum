@@ -14,10 +14,17 @@ from app.models.schemas import (
     MarketBatchRequest,
     MarketBatchResponse
 )
-from app.services.market import market_service
+from app.services.market import market_service, CACHE_TTL_SECONDS
+from app.services.market_status import get_all_market_statuses
 from app.api.subscriptions import check_price_alerts
 
 router = APIRouter(prefix="/api/market", tags=["market"])
+
+
+@router.get("/status")
+def get_market_status():
+    """Get current status of all markets"""
+    return get_all_market_statuses()
 
 
 @router.get("/{ticker}", response_model=MarketDataResponse)
@@ -65,7 +72,7 @@ def get_market_batch(request: MarketBatchRequest):
             for record in db_records:
                 # Only use DB record if fresh (within refresh interval)
                 age = (now - record.timestamp).total_seconds() if record.timestamp else 999999
-                if age < 300:
+                if age < CACHE_TTL_SECONDS:
                     with market_service._cache_lock:
                         market_service._cache[record.ticker] = {
                             "ticker": record.ticker,
@@ -108,11 +115,13 @@ def get_market_batch(request: MarketBatchRequest):
             db.close()
 
     # Return all: DB-loaded (from cache) + freshly fetched
+    # CRITICAL: Only return data for the requested tickers (prevent cross-contamination)
+    requested_ticker_set = set(tickers)
     all_quotes = []
     for ticker in tickers:
         with market_service._cache_lock:
             if ticker in market_service._cache:
-                all_quotes.append(market_service._cache[ticker])
+                all_quotes.append(market_service._cache[ticker].copy())
 
     return MarketBatchResponse(
         data=all_quotes,

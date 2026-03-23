@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { marketApi } from '@/lib/api';
@@ -9,13 +9,12 @@ import StockTreemap from '@/components/StockTreemap';
 import TradingDashboard from '@/components/TradingDashboard';
 
 // Comprehensive global market data - ~1000 symbols
-// fastRefresh: true = 15s refresh (indices, ETFs), false = 5min refresh (individual stocks)
-const TICKER_CATEGORIES: Record<string, { title: string; description: string; tickers: string[]; fastRefresh?: boolean }> = {
+// All data is 15-minute delayed per OpenSpec Decision 20
+const TICKER_CATEGORIES: Record<string, { title: string; description: string; tickers: string[] }> = {
   // ===== GLOBAL INDICES =====
   'Global Indices': {
     title: 'Global Indices',
     description: '世界主要大盘指数',
-    fastRefresh: true,
     tickers: [
       '^GSPC', '^DJI', '^IXIC', '^RUT', '^VIX',  // US
       '^N225', '^AXJO', '^BSESN',  // Asia
@@ -32,7 +31,7 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
       'AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'GOOG', 'TSLA', 'AMD', 'INTC', 'QCOM',
       'TXN', 'ADI', 'AVGO', 'MU', 'LRCX', 'KLAC', 'SNPS', 'CDNS', 'PANW', 'CRWD',
       'NET', 'ZS', 'OKTA', 'DDOG', 'MDB', 'COIN', 'RBLX', 'UBER', 'LYFT', 'SNOW',
-      'NET', 'VEEV', 'TWLO', 'ZI', 'PATH', 'UPST', 'GPRO', 'AR', 'APP', 'DLO',
+      'VEEV', 'TWLO', 'PATH', 'UPST', 'GPRO', 'AR', 'APP', 'DLO',
     ],
   },
 
@@ -45,7 +44,7 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
       'COST', 'ADBE', 'MCD', 'TMO', 'CSCO', 'ACN', 'ABT', 'DHR', 'WMT', 'NEE', 'NKE',
       'ORCL', 'UPS', 'MS', 'LOW', 'BA', 'IBM', 'CAT', 'HON', 'SPGI', 'INTU', 'AXP',
       'GS', 'BLK', 'DE', 'MDT', 'AMGN', 'GILD', 'ISRG', 'SCHW', 'BKNG', 'VRTX', 'REGN',
-      'ZTS', 'PLD', 'MMC', 'TJX', 'EL', 'CL', 'MDLZ', 'KMB', 'GIS', 'K', 'HSY',
+      'ZTS', 'PLD', 'TJX', 'EL', 'CL', 'MDLZ', 'KMB', 'GIS', 'HSY',
     ],
   },
 
@@ -55,8 +54,8 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     description: '美国金融股',
     tickers: [
       'JPM', 'BAC', 'WFC', 'GS', 'MS', 'C', 'BLK', 'AXP', 'SCHW', 'USB',
-      'PNC', 'TFC', 'COF', 'DFS', 'MET', 'PRU', 'AFL', 'TRV', 'ALL', 'TRV',
-      'AIG', 'PRU', 'HIG', 'BRO', 'WRB', 'RF', 'HBAN', 'KEY', 'STT', 'SPGI',
+      'PNC', 'TFC', 'COF', 'MET', 'PRU', 'AFL', 'TRV', 'ALL',
+      'AIG', 'HIG', 'BRO', 'WRB', 'RF', 'HBAN', 'KEY', 'STT', 'SPGI',
       'ICE', 'CME', 'MCO', 'NDAQ', 'FIS', 'FISV', 'PAYX', 'ADP', 'CINF', 'L',
     ],
   },
@@ -68,8 +67,8 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     tickers: [
       'UNH', 'JNJ', 'MRK', 'ABBV', 'LLY', 'PFE', 'ABT', 'DHR', 'TMO', 'AMGN',
       'GILD', 'ISRG', 'VRTX', 'REGN', 'ZTS', 'BMY', 'MDT', 'SYK', 'BSX', 'EW',
-      'IQV', 'IDXX', 'LH', 'DGX', 'ABC', 'CAH', 'MCK', 'ESRX', 'CVS', 'CI',
-      'HUM', 'CNC', 'MOH', 'ELV', 'HCA', 'UHS', 'THC', 'DVH', 'XHE', 'VTR',
+      'IQV', 'IDXX', 'LH', 'DGX', 'CAH', 'MCK', 'CVS', 'CI',
+      'HUM', 'CNC', 'MOH', 'ELV', 'HCA', 'UHS', 'THC', 'XHE', 'VTR',
     ],
   },
 
@@ -79,8 +78,7 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     description: '美国能源股',
     tickers: [
       'XOM', 'CVX', 'COP', 'EOG', 'SLB', 'MPC', 'PSX', 'VLO', 'HAL', 'OXY',
-      'DVN', 'FANG', 'BKR', 'KMI', 'WMB', 'OKE', 'TRGP', 'WMB', 'ET', 'ENB',
-      'PBA', 'LNG', 'D', 'ES', 'AEP', 'EXC', 'NEE', 'SRE', 'PCG', 'ED',
+      'DVN', 'FANG', 'BKR', 'KMI', 'WMB', 'OKE', 'TRGP', 'ET', 'ENB', 'PBA', 'LNG',
     ],
   },
 
@@ -91,8 +89,8 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     tickers: [
       'AMZN', 'TSLA', 'HD', 'NKE', 'MCD', 'SBUX', 'BKNG', 'GM', 'F', 'ROST',
       'DLTR', 'DG', 'BBY', 'ORLY', 'AZO', 'YUM', 'CMG', 'RIVN', 'LCID', 'GRMN',
-      'HLT', 'MAR', 'VAC', 'RCL', 'CCL', 'NCLH', 'WYNN', 'MGM', 'CZR', 'WYNN',
-      'LVS', 'MHK', 'BWH', 'WHR', 'DRI', 'TXRH', 'WING', 'CULP', 'LOCM', 'SCSC',
+      'HLT', 'MAR', 'VAC', 'RCL', 'CCL', 'NCLH', 'WYNN', 'MGM', 'CZR',
+      'LVS', 'MHK', 'WHR', 'DRI', 'TXRH', 'WING', 'CULP', 'LOCM', 'SCSC',
     ],
   },
 
@@ -103,8 +101,8 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     tickers: [
       'CAT', 'DE', 'BA', 'HON', 'UPS', 'RTX', 'LMT', 'NOC', 'GD', 'APH',
       'EMR', 'ROK', 'ITW', 'ETN', 'CMI', 'AME', 'IR', 'PNR', 'XYL', 'CARR',
-      'OTIS', 'GE', 'MMM', 'FDX', 'CSX', 'NSC', 'UNP', 'KSU', 'DAL', 'UAL',
-      'AAL', 'LUV', 'ALK', 'CHRW', 'CPRT', 'FDX', 'EXPD', 'JBHT',
+      'OTIS', 'GE', 'MMM', 'FDX', 'CSX', 'NSC', 'UNP', 'DAL', 'UAL',
+      'AAL', 'LUV', 'ALK', 'CHRW', 'CPRT', 'EXPD', 'JBHT',
     ],
   },
 
@@ -115,7 +113,7 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     tickers: [
       'PLD', 'AMT', 'CCI', 'EQIX', 'SPG', 'O', 'PSA', 'DLR', 'AVB', 'EQR',
       'WELL', 'VTR', 'SBAC', 'ARE', 'MAA', 'UDR', 'ESS', 'REG', 'CPT', 'KIM',
-      'HST', 'RHP', 'SUI', 'ELS', 'AIV', 'CRE', 'SRC', 'LXFR', 'SBRA', 'RESI',
+      'HST', 'RHP', 'SUI', 'ELS', 'AIV', 'CRE', 'LXFR', 'SBRA', 'RESI',
     ],
   },
 
@@ -125,8 +123,8 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     description: '美国公用事业',
     tickers: [
       'NEE', 'DUK', 'SO', 'D', 'AEP', 'EXC', 'XEL', 'SRE', 'PCG', 'ED',
-      'PEG', 'ETR', 'AEE', 'ES', 'EIX', 'AWK', 'WEC', 'DTE', 'DUK', 'GWI',
-      'NI', 'EVRG', 'AEP', 'CNP', 'BKH', 'ATO', 'CMS', 'D', 'AWK',
+      'PEG', 'ETR', 'AEE', 'ES', 'EIX', 'AWK', 'WEC', 'DTE',
+      'NI', 'EVRG', 'CNP', 'BKH', 'ATO', 'CMS',
     ],
   },
 
@@ -147,7 +145,7 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     description: '美国通信服务',
     tickers: [
       'GOOGL', 'META', 'NFLX', 'DIS', 'CMCSA', 'T', 'VZ', 'TMUS', 'CHTR', 'WBD',
-      'PARA', 'FOX', 'NWSA', 'CBS', 'WBD', 'IPG', 'OMC', 'MTCH', 'DBX',
+      'PARA', 'FOX', 'NWSA', 'CBS', 'OMC', 'MTCH', 'DBX',
       'YELP', 'GRPN', 'CARR', 'ATVI', 'EA', 'TTWO', 'NTDOY', 'SOHU',
     ],
   },
@@ -156,7 +154,6 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
   'US ETFs': {
     title: 'US ETFs',
     description: '美国ETF',
-    fastRefresh: true,
     tickers: [
       'SPY', 'QQQ', 'IWM', 'EFA', 'EEM', 'TLT', 'GLD', 'SLV', 'UNG', 'XLE', 'XLF',
       'XLV', 'XLY', 'XLK', 'XLC', 'XLRE', 'ARKK', 'VO', 'VB', 'VTI', 'VEA', 'VWO',
@@ -191,7 +188,6 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
   'Rates & Bonds': {
     title: 'Rates & Bonds',
     description: '利率与国债',
-    fastRefresh: true,
     tickers: [
       '^TNX', '^TYX', '^FVX', '^IRX', 'TLT', 'IEF', 'SHY', 'DXY',
       'EURUSD=X', 'GBPUSD=X', 'USDJPY=X', 'USDCHF=X', 'AUDUSD=X', 'USDCAD=X', 'NZDUSD=X',
@@ -221,9 +217,9 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     description: '日本股市',
     tickers: [
       '9984.T', '7203.T', '6752.T', '9432.T', '9434.T', '8306.T', '8316.T', '8604.T',
-      '8021.T', '8035.T', '8058.T', '6098.T', '4452.T', '4901.T', '7733.T', '6902.T',
-      '6501.T', '6503.T', '6841.T', '6971.T', '7951.T', '9675.T', '6971.T', '6367.T',
-      '4004.T', '5214.T', '5332.T', '5334.T', '6103.T', '6271.T', '6326.T', '7751.T',
+      '8035.T', '8058.T', '6098.T', '4452.T', '4901.T', '7733.T', '6902.T',
+      '6501.T', '6503.T', '6841.T', '6971.T', '7951.T', '6367.T',
+      '4004.T', '5214.T', '5332.T', '5334.T', '6103.T', '6326.T', '7751.T',
     ],
   },
 
@@ -233,22 +229,22 @@ const TICKER_CATEGORIES: Record<string, { title: string; description: string; ti
     description: '欧洲股市',
     tickers: [
       // Netherlands
-      'ASML.AS', 'ADYEN.AS', 'URW.AS', 'PHIA.AS', 'HEIA.AS',
+      'ASML.AS', 'ADYEN.AS', 'PHIA.AS', 'HEIA.AS',
       // Germany
-      'SAP.DE', 'SIE.DE', 'ALV.DE', 'DPW.DE', 'DHL.DE', 'BMW.DE', 'VOW3.DE', 'DTE.DE',
+      'SAP.DE', 'SIE.DE', 'ALV.DE', 'DHL.DE', 'BMW.DE', 'VOW3.DE', 'DTE.DE',
       'ENR.DE', 'MRK.DE', 'BAYN.DE', 'LIN.DE', 'CON.DE', 'FRE.DE', 'MTX.DE', 'QIA.DE',
       // UK
-      'HSBC', 'SHELL.L', 'BP.L', 'GSK.L', 'AZN.L', 'REL.L', 'BHP.L', 'RIO.L', 'VOD.L',
-      'ULVR.L', 'HSBA.L', 'GSK.L', 'DGE.L', 'NG.L', 'BP.L', 'SHEL.L', 'BATS.L', 'IMB.L',
+      'HSBC', 'BP.L', 'GSK.L', 'AZN.L', 'REL.L', 'BHP.L', 'RIO.L', 'VOD.L',
+      'ULVR.L', 'HSBA.L', 'DGE.L', 'NG.L', 'SHEL.L', 'BATS.L', 'IMB.L',
       // France
-      'OR.PA', 'TTE.PA', 'AIR.PA', 'SAN.PA', 'LVMH.PA', 'RMS.PA', 'MC.PA', 'BNP.PA',
+      'OR.PA', 'TTE.PA', 'AIR.PA', 'SAN.PA', 'RMS.PA', 'MC.PA', 'BNP.PA',
       'GLE.PA', 'ORA.PA', 'ENGI.PA', 'VIV.PA', 'CAP.PA', 'AC.PA', 'EL.PA',
       // Switzerland
       'NESN.SW', 'NOVN.SW', 'ROG.SW', 'UBSG.SW', 'ABBN.SW', 'SLHN.SW', 'ZURN.SW',
       // Scandinavia
       'VOLV-B.ST', 'NVO', 'VWS.CO', 'CARL-B.CO', 'COLO-B.CO', 'SAMPO.HE', 'STERV.HE',
       // Italy/Spain/Belgium
-      'ISP.MI', 'ENEL.MI', 'INI.MI', 'UCG.MI', 'TRI.MI', 'BBVA.MC', 'SAN.MC', 'TEF.MC',
+      'ISP.MI', 'ENEL.MI', 'UCG.MI', 'BBVA.MC', 'SAN.MC', 'TEF.MC',
     ],
   },
 
@@ -370,22 +366,48 @@ export default function MarketPage() {
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [watchlistError, setWatchlistError] = useState<string | null>(null);
 
+  // Market status state
+  const [marketStatus, setMarketStatus] = useState<Record<string, { status: string; current_time: string; closes_at?: string; opens_at?: string; next_open?: string }>>({});
+
+  // Ref to track current request's category (for race condition fix)
+  const currentCategoryRef = useRef<Category>('Global Indices');
+
   // Fetch batch data when category changes
   const fetchCategoryData = useCallback(async (category: Category) => {
     const tickers = TICKER_CATEGORIES[category]?.tickers || [];
     if (tickers.length === 0) return;
     setCategoryError(null);
 
+    // Mark this as the current request
+    currentCategoryRef.current = category;
+
     try {
       const result = await marketApi.getBatch(tickers);
+
+      // Race condition guard: ignore response if category has changed
+      if (currentCategoryRef.current !== category) {
+        console.log(`Ignored stale response for category ${category} (current: ${currentCategoryRef.current})`);
+        return;
+      }
+
+      // Validate: only accept data for the requested tickers
+      const requestedSet = new Set(tickers);
       const dataMap: Record<string, MarketDataRecord> = {};
       result.data.forEach((item: MarketDataRecord) => {
-        dataMap[item.ticker] = item;
+        // Only include tickers that were requested for this category
+        if (requestedSet.has(item.ticker)) {
+          dataMap[item.ticker] = item;
+        } else {
+          console.warn(`Ignored ticker ${item.ticker} (not in category ${category})`);
+        }
       });
       setCategoryData(dataMap);
     } catch (err) {
-      console.error('Failed to fetch category data:', err);
-      setCategoryError(err instanceof Error ? err.message : 'Failed to load market data');
+      // Only set error if we're still on the same category
+      if (currentCategoryRef.current === category) {
+        console.error('Failed to fetch category data:', err);
+        setCategoryError(err instanceof Error ? err.message : 'Failed to load market data');
+      }
     }
   }, []);
 
@@ -410,25 +432,31 @@ export default function MarketPage() {
   useEffect(() => {
     fetchCategoryData(activeCategory);
     fetchWatchlistData(watchlist);
+
+    // Fetch market status
+    marketApi.getStatus().then((status) => {
+      setMarketStatus(status.markets);
+    }).catch(console.error);
   }, [activeCategory, watchlist, fetchCategoryData, fetchWatchlistData]);
 
-  // Periodic refresh for fastRefresh categories
+  // Periodic refresh - unified 15 minute strategy per OpenSpec Decision 20
   useEffect(() => {
-    const category = TICKER_CATEGORIES[activeCategory];
-    if (!category?.fastRefresh) return;
+    const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes in ms
 
     const interval = setInterval(() => {
       fetchCategoryData(activeCategory);
-    }, 15000);
+    }, REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
   }, [activeCategory, fetchCategoryData]);
 
-  // Periodic refresh for watchlist (always 15s since it's small)
+  // Periodic refresh for watchlist (15 minutes, unified strategy)
   useEffect(() => {
+    const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes in ms
+
     const interval = setInterval(() => {
       fetchWatchlistData(watchlist);
-    }, 15000);
+    }, REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
   }, [watchlist, fetchWatchlistData]);
@@ -461,10 +489,43 @@ export default function MarketPage() {
       {/* Header */}
       <header className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Market Data & Trading</h1>
-          <p className="text-muted-foreground mt-2">
-            {totalTickers}+ global symbols · Indices/ETFs: 15s · Stocks: 5min
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">Market Data & Trading</h1>
+            <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">
+              15-min delayed
+            </span>
+          </div>
+          <p className="text-muted-foreground mt-1">
+            {totalTickers}+ global symbols · Unified 15-min refresh
           </p>
+          {/* Market Status Indicators */}
+          <div className="flex items-center gap-2 mt-2">
+            {Object.entries(marketStatus).map(([code, info]) => (
+              <div
+                key={code}
+                className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${
+                  info.status === 'open'
+                    ? 'bg-green-100 text-green-700'
+                    : info.status === 'after_hours'
+                    ? 'bg-orange-100 text-orange-700'
+                    : info.status === 'pre_open'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  info.status === 'open' ? 'bg-green-500' : 'bg-gray-400'
+                }`} />
+                <span>{code}</span>
+                <span className="text-xs opacity-75">
+                  {info.status === 'open' && info.closes_at ? `Closes ${info.closes_at}` : ''}
+                  {info.status === 'after_hours' && info.next_open ? `Opens ${info.next_open}` : ''}
+                  {info.status === 'pre_open' && info.opens_at ? `Opens ${info.opens_at}` : ''}
+                  {info.status === 'weekend' ? 'Closed' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <button
@@ -586,6 +647,7 @@ export default function MarketPage() {
                 data={categoryData[ticker]}
                 onSelect={(t) => setSelectedTicker(t)}
                 compact
+                dataKey={activeCategory}
               />
               {!watchlist.includes(ticker) && (
                 <button

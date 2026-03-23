@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, UniqueConstraint, Float
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date, ForeignKey, UniqueConstraint, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -394,3 +394,35 @@ class AuditLog(Base):
     target_id = Column(Integer, nullable=True)
     details = Column(Text, nullable=True)  # JSON with additional details
     created_at = Column(DateTime, server_default=func.now())
+
+
+# ============================================================
+# NAV & Position Snapshot Subsystem
+# ============================================================
+
+class NavSnapshot(Base):
+    """Daily NAV snapshots for agents - captured at US market close (4:05 PM ET)"""
+    __tablename__ = "nav_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    date = Column(Date, nullable=False)
+    nav = Column(Float, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("agent_id", "date", name="unique_nav_snapshot"),)
+
+
+class PositionSnapshot(Base):
+    """Daily position snapshots for agents - captured at US market close (4:05 PM ET)"""
+    __tablename__ = "position_snapshots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    date = Column(Date, nullable=False)
+    ticker = Column(String, nullable=False)
+    quantity = Column(Float, nullable=False)
+    average_cost = Column(Float, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("agent_id", "date", "ticker", name="unique_position_snapshot"),)

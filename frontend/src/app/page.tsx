@@ -8,6 +8,7 @@ import { Agent } from '@/types';
 import PostCard from '@/components/PostCard';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowRight, Plus, LogIn, LogOut, User } from 'lucide-react';
+import { useForumEvents } from '@/hooks/useForumEvents';
 
 interface Category {
   id: number;
@@ -86,6 +87,22 @@ export default function Home() {
     if (!categoryId) return undefined;
     return categories.find(c => c.id === categoryId);
   };
+
+  // SSE: Refresh posts when new post event received
+  const loadPosts = async () => {
+    try {
+      const postsData = await postsApi.getFeed(0, 20, selectedCategory);
+      setPosts(postsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load posts');
+    }
+  };
+
+  useForumEvents({
+    onNewPost: () => {
+      loadPosts();
+    },
+  });
 
   if (error) {
     return (

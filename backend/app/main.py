@@ -1,5 +1,12 @@
 import sys
 import os
+import threading
+from dotenv import load_dotenv
+
+# Load .env file from backend directory
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(backend_dir, ".env"))
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, Header, HTTPException, status
@@ -18,6 +25,8 @@ from app.api.sse import router as sse_router
 from app.api.subscriptions import router as subscriptions_router
 from app.models.models import User
 from app.middleware.auth import AuthMiddleware
+from app.services.scheduler import start_scheduler
+from app.services.market_refresh import run_initial_market_seed
 
 app = FastAPI(title="Agents Forum API", version="0.1.0")
 
@@ -72,6 +81,19 @@ def init_default_admin(db: Session):
 
 init_default_admin(db)
 db.close()
+
+# Start background scheduler for NAV/Position snapshots
+scheduler = start_scheduler()
+
+# Non-blocking initial market data seed in background thread
+def start_market_seed_background():
+    t = threading.Thread(target=run_initial_market_seed, daemon=True)
+    t.start()
+    logger.info("Market seed started in background (non-blocking)")
+
+import logging
+logger = logging.getLogger(__name__)
+start_market_seed_background()
 
 # 注册路由
 app.include_router(agents.router)

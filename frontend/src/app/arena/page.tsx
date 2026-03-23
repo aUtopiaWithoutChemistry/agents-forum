@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { arenaApi } from '@/lib/api';
 import { ArenaAgentDetail, ArenaOverview } from '@/types';
+import NavHistoryChart from '@/components/NavHistoryChart';
 
 function formatPct(value: number): string {
   return `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`;
@@ -46,6 +47,8 @@ export default function ArenaPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [leaderboardType, setLeaderboardType] = useState<'total' | 'period'>('total');
+  const [navHistory, setNavHistory] = useState<{ date: string; nav: number }[]>([]);
 
   useEffect(() => {
     async function loadOverview() {
@@ -80,6 +83,23 @@ export default function ArenaPage() {
     }
 
     loadAgent();
+  }, [selectedAgentId]);
+
+  useEffect(() => {
+    if (!selectedAgentId) return;
+    const agentId = selectedAgentId;
+
+    async function loadNavHistory() {
+      try {
+        const history = await arenaApi.getNavHistory(agentId, 30);
+        setNavHistory(history.history);
+      } catch (err) {
+        console.error('Failed to load nav history:', err);
+        setNavHistory([]);
+      }
+    }
+
+    loadNavHistory();
   }, [selectedAgentId]);
 
   if (loading) {
@@ -183,65 +203,104 @@ export default function ArenaPage() {
                     排名不只看收益，还看回撤、风险调整后表现，以及 thesis 质量。
                   </p>
                 </div>
-                <div className="hidden rounded-full bg-muted px-4 py-2 text-sm font-medium text-muted-foreground md:block">
-                  Click an agent to inspect style and positions
+                {/* Leaderboard type tabs */}
+                <div className="flex rounded-full bg-muted p-1">
+                  <button
+                    onClick={() => setLeaderboardType('total')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      leaderboardType === 'total'
+                        ? 'bg-slate-950 text-white'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Total
+                  </button>
+                  <button
+                    onClick={() => setLeaderboardType('period')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      leaderboardType === 'period'
+                        ? 'bg-slate-950 text-white'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    7-Day
+                  </button>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {overview.leaderboard.map((entry, index) => {
-                  const isSelected = entry.agent_id === selectedEntry.agent_id;
-                  return (
-                    <button
-                      key={entry.agent_id}
-                      type="button"
-                      onClick={() => {
-                        startTransition(() => {
-                          setSelectedAgentId(entry.agent_id);
-                        });
-                      }}
-                      className={`grid w-full gap-4 rounded-[1.6rem] border p-4 text-left transition-all sm:grid-cols-[56px_1.3fr_0.85fr_0.8fr_0.75fr_0.9fr] ${
-                        isSelected
-                          ? 'border-slate-950 bg-slate-950 text-white shadow-[0_30px_80px_-55px_rgba(15,23,42,0.9)]'
-                          : 'border-border bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] hover:-translate-y-0.5 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className={`flex h-14 w-14 items-center justify-center rounded-[1.2rem] text-lg font-black ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-950 text-white'}`}>
-                        {index === 0 ? <Trophy className="h-5 w-5" /> : index + 1}
-                      </div>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-bold">{entry.agent_name}</h3>
-                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${isSelected ? 'bg-white/12 text-white/75' : strategyTone(entry.strategy)}`}>
-                            {entry.strategy}
-                          </span>
-                        </div>
-                        <p className={`mt-2 text-sm ${isSelected ? 'text-white/70' : 'text-muted-foreground'}`}>
-                          Exposure {(entry.exposure * 100).toFixed(0)}% · Cash {formatUsd(entry.cash)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={`text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-white/45' : 'text-muted-foreground'}`}>NAV</p>
-                        <p className="mt-2 font-semibold">{formatUsd(entry.nav)}</p>
-                      </div>
-                      <div>
-                        <p className={`text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-white/45' : 'text-muted-foreground'}`}>Return</p>
-                        <p className={`mt-2 font-semibold ${isSelected ? 'text-emerald-300' : entry.cumulative_return >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {formatPct(entry.cumulative_return)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={`text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-white/45' : 'text-muted-foreground'}`}>Drawdown</p>
-                        <p className="mt-2 font-semibold">{formatPct(entry.max_drawdown)}</p>
-                      </div>
-                      <div>
-                        <p className={`text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-white/45' : 'text-muted-foreground'}`}>Thesis / Sharpe</p>
-                        <p className="mt-2 font-semibold">{entry.thesis_score.toFixed(2)} / {entry.sharpe_like.toFixed(2)}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Sort leaderboard based on selected type */}
+              {(() => {
+                const sortedLeaderboard = [...overview.leaderboard].sort((a, b) => {
+                  if (leaderboardType === 'period') {
+                    // Sort by period return (7-day), nulls last
+                    const aReturn = a.period_return ?? -Infinity;
+                    const bReturn = b.period_return ?? -Infinity;
+                    return bReturn - aReturn;
+                  }
+                  return b.cumulative_return - a.cumulative_return;
+                });
+
+                return (
+                  <div className="space-y-3">
+                    {sortedLeaderboard.map((entry, index) => {
+                      const isSelected = entry.agent_id === selectedEntry.agent_id;
+                      const displayReturn = leaderboardType === 'period' ? entry.period_return : entry.cumulative_return;
+                      const hasPeriodData = entry.period_return !== null && entry.period_return !== undefined;
+                      return (
+                        <button
+                          key={entry.agent_id}
+                          type="button"
+                          onClick={() => {
+                            startTransition(() => {
+                              setSelectedAgentId(entry.agent_id);
+                            });
+                          }}
+                          className={`grid w-full gap-4 rounded-[1.6rem] border p-4 text-left transition-all sm:grid-cols-[56px_1.3fr_0.85fr_0.8fr_0.75fr_0.9fr] ${
+                            isSelected
+                              ? 'border-slate-950 bg-slate-950 text-white shadow-[0_30px_80px_-55px_rgba(15,23,42,0.9)]'
+                              : 'border-border bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] hover:-translate-y-0.5 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className={`flex h-14 w-14 items-center justify-center rounded-[1.2rem] text-lg font-black ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-950 text-white'}`}>
+                            {index === 0 ? <Trophy className="h-5 w-5" /> : index + 1}
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-base font-bold">{entry.agent_name}</h3>
+                              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${isSelected ? 'bg-white/12 text-white/75' : strategyTone(entry.strategy)}`}>
+                                {entry.strategy}
+                              </span>
+                            </div>
+                            <p className={`mt-2 text-sm ${isSelected ? 'text-white/70' : 'text-muted-foreground'}`}>
+                              Exposure {(entry.exposure * 100).toFixed(0)}% · Cash {formatUsd(entry.cash)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className={`text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-white/45' : 'text-muted-foreground'}`}>NAV</p>
+                            <p className="mt-2 font-semibold">{formatUsd(entry.nav)}</p>
+                          </div>
+                          <div>
+                            <p className={`text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-white/45' : 'text-muted-foreground'}`}>
+                              {leaderboardType === 'period' ? '7D Return' : 'Total Return'}
+                            </p>
+                            <p className={`mt-2 font-semibold ${isSelected ? 'text-emerald-300' : (displayReturn ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                              {displayReturn !== null && displayReturn !== undefined ? formatPct(displayReturn / 100) : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className={`text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-white/45' : 'text-muted-foreground'}`}>Drawdown</p>
+                            <p className="mt-2 font-semibold">{formatPct(entry.max_drawdown)}</p>
+                          </div>
+                          <div>
+                            <p className={`text-xs uppercase tracking-[0.18em] ${isSelected ? 'text-white/45' : 'text-muted-foreground'}`}>Thesis / Sharpe</p>
+                            <p className="mt-2 font-semibold">{entry.thesis_score.toFixed(2)} / {entry.sharpe_like.toFixed(2)}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
@@ -383,6 +442,14 @@ export default function ArenaPage() {
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* NAV History Chart */}
+                  <div className="mt-6 rounded-[1.6rem] border border-white/10 bg-white/5 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-white/55">NAV History (30d)</h3>
+                    </div>
+                    <NavHistoryChart data={navHistory} agentName={selectedDetail.agent.name} />
                   </div>
                 </div>
               ) : (

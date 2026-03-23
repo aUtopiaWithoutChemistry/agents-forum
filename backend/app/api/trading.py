@@ -1,20 +1,24 @@
 """Trading Account API endpoints"""
-from fastapi import APIRouter, HTTPException, Request
-from typing import Optional
+from fastapi import APIRouter, HTTPException, Request, Depends
+from typing import Optional, Dict
 from sqlalchemy.orm import Session
 from datetime import datetime
 import json
+import os
 
 from app.database import get_db
-from app.models.models import TradingAccount, Position, Order, AuditLog
+from app.models.models import TradingAccount, Position, Order, AuditLog, PositionSnapshot
 from app.models.schemas import (
     TradingAccountResponse,
     PositionResponse,
     BalanceResponse,
     OrderCreate,
-    OrderResponse
+    OrderResponse,
+    PositionSnapshotResponse
 )
 from app.services.market import market_service
+from app.services.snapshots import snapshot_service
+from app.services.market_status import is_market_open
 
 
 def get_authenticated_agent_id(request: Request) -> Optional[str]:
@@ -176,6 +180,14 @@ def create_order(order: OrderCreate):
     if order.quantity <= 0:
         raise HTTPException(status_code=400, detail="quantity must be positive")
 
+    # Check market hours (skip if TRADE_ANYTIME=true for testing)
+    if not os.getenv("TRADE_ANYTIME", "false").lower() == "true":
+        if not is_market_open("US"):
+            raise HTTPException(
+                status_code=400,
+                detail="Market is closed. Trading is only allowed during US market hours (9:30 AM - 4:00 PM ET)"
+            )
+
     # Get current market price
     quote = market_service.get_quote(order.ticker)
     if not quote:
@@ -185,23 +197,48 @@ def create_order(order: OrderCreate):
 
     db = next(get_db())
     try:
-        account = get_or_create_trading_account(db, order.agent_id)
+        # Lock the account row to prevent concurrent orders from overspending
+        account = db.query(TradingAccount).filter(
+            TradingAccount.agent_id == order.agent_id
+        ).with_for_update().first()
+
+        if not account:
+            account = get_or_create_trading_account(db, order.agent_id)
+            account = db.query(TradingAccount).filter(
+                TradingAccount.agent_id == order.agent_id
+            ).with_for_update().first()
+
+        # Check order cooldown (5 seconds between orders for same ticker)
+        # This prevents rapid-fire order spam
+        cooldown_seconds = int(os.getenv("ORDER_COOLDOWN_SECONDS", "5"))
+        last_order = db.query(Order).filter(
+            Order.account_id == account.id,
+            Order.ticker == order.ticker
+        ).order_by(Order.created_at.desc()).first()
+
+        if last_order:
+            time_since_last = (datetime.utcnow() - last_order.created_at.replace(tzinfo=None)).total_seconds()
+            if time_since_last < cooldown_seconds:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Order cooldown active. Please wait {int(cooldown_seconds - time_since_last)} more seconds before placing another order for {order.ticker}"
+                )
 
         if order.order_type == "buy":
             total_cost = order.quantity * current_price
 
-            # Check balance
+            # Check balance (already locked by with_for_update)
             if account.balance < total_cost:
                 raise HTTPException(status_code=400, detail="Insufficient funds")
 
             # Deduct from balance
             account.balance -= total_cost
 
-            # Update or create position
+            # Lock position row if exists to prevent race conditions on position update
             position = db.query(Position).filter(
                 Position.account_id == account.id,
                 Position.ticker == order.ticker
-            ).first()
+            ).with_for_update().first()
 
             if position:
                 # Update average cost
@@ -239,11 +276,12 @@ def create_order(order: OrderCreate):
             })
 
         else:  # sell
-            # Check holdings
+            # Lock position row to prevent concurrent sell orders from overselling
+            # Use SELECT FOR UPDATE to serialize access to the same position
             position = db.query(Position).filter(
                 Position.account_id == account.id,
                 Position.ticker == order.ticker
-            ).first()
+            ).with_for_update().first()
 
             if not position or position.quantity < order.quantity:
                 raise HTTPException(status_code=400, detail="Insufficient holdings")
@@ -306,3 +344,90 @@ def get_orders(agent_id: str, status: Optional[str] = None):
         return orders
     finally:
         db.close()
+
+
+@router.get("/history/{agent_id}", response_model=list[PositionSnapshotResponse])
+def get_historical_positions(agent_id: str, date: str, db: Session = Depends(get_db)):
+    """Get reconstructed positions for an agent on a given date.
+
+    Reconstruction: nearest prior snapshot + subsequent orders up to and including the target date.
+
+    Args:
+        agent_id: The agent identifier
+        date: Target date in YYYY-MM-DD format
+    """
+    from datetime import datetime as dt, date as date_type
+
+    try:
+        target_date = date_type.fromisoformat(date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    # Get nearest position snapshot on or before target_date
+    nearest_snapshot = db.query(PositionSnapshot).filter(
+        PositionSnapshot.agent_id == agent_id,
+        PositionSnapshot.date <= target_date
+    ).order_by(PositionSnapshot.date.desc()).first()
+
+    if not nearest_snapshot:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No position snapshot found for agent {agent_id} on or before {date}"
+        )
+
+    snapshot_date = nearest_snapshot.date
+
+    # Build positions from the nearest snapshot
+    snapshot_positions: Dict[str, Dict] = {}
+    snapshots_on_date = db.query(PositionSnapshot).filter(
+        PositionSnapshot.agent_id == agent_id,
+        PositionSnapshot.date == snapshot_date
+    ).all()
+
+    for snap in snapshots_on_date:
+        snapshot_positions[snap.ticker] = {
+            "quantity": snap.quantity,
+            "average_cost": snap.average_cost
+        }
+
+    # Apply orders between snapshot_date and target_date (inclusive)
+    orders_since = snapshot_service.get_orders_since(agent_id, snapshot_date, db)
+
+    # Filter orders up to and including target_date
+    for order in orders_since:
+        if order.executed_at is None:
+            continue
+        order_date = order.executed_at.date()
+        if order_date > target_date:
+            break
+        if order_date < snapshot_date:
+            continue
+
+        ticker = order.ticker
+        if ticker not in snapshot_positions:
+            snapshot_positions[ticker] = {"quantity": 0.0, "average_cost": 0.0}
+
+        pos = snapshot_positions[ticker]
+
+        if order.order_type == "buy":
+            total_cost = pos["quantity"] * pos["average_cost"] + order.quantity * order.price
+            pos["quantity"] += order.quantity
+            if pos["quantity"] > 0:
+                pos["average_cost"] = total_cost / pos["quantity"]
+        elif order.order_type == "sell":
+            pos["quantity"] -= order.quantity
+            if pos["quantity"] <= 0:
+                del snapshot_positions[ticker]
+
+    # Convert to response format
+    result = []
+    for ticker, pos in snapshot_positions.items():
+        result.append(PositionSnapshotResponse(
+            agent_id=agent_id,
+            date=target_date,
+            ticker=ticker,
+            quantity=pos["quantity"],
+            average_cost=pos["average_cost"]
+        ))
+
+    return result

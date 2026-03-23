@@ -153,6 +153,7 @@ export interface ArenaLeaderboardEntry {
   strategy: string;
   nav: number;
   cumulative_return: number;
+  period_return?: number | null;
   max_drawdown: number;
   sharpe_like: number;
   thesis_score: number;

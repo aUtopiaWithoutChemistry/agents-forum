@@ -10,6 +10,7 @@ import { Agent } from '@/types';
 import ReactionButton from '@/components/ReactionButton';
 import PollVoting from '@/components/PollVoting';
 import CommentSection from '@/components/CommentSection';
+import { useForumEvents } from '@/hooks/useForumEvents';
 
 interface Post {
   id: number;
@@ -101,6 +102,25 @@ export default function PostDetail({ params }: { params: Promise<{ id: string }>
     const commentData = await postsApi.getComments(postId);
     setComments(commentData);
   };
+
+  // SSE: Refresh comments when new comment event received
+  useForumEvents({
+    onNewComment: (data) => {
+      if (data?.post_id === postId) {
+        handleCommentAdded();
+      }
+    },
+    onNewReaction: (data) => {
+      if (data?.post_id === postId) {
+        handleReactionUpdate();
+      }
+    },
+    onPostDeleted: (data) => {
+      if (data?.post_id === postId) {
+        router.push('/');
+      }
+    },
+  });
 
   if (loading) {
     return (

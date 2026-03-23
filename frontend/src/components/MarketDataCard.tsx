@@ -13,15 +13,20 @@ interface MarketDataCardProps {
   data?: MarketDataQuote | null;
   onSelect?: (ticker: string) => void;
   compact?: boolean;
+  // Add dataKey to force re-render when category changes
+  dataKey?: string;
 }
 
-export default function MarketDataCard({ ticker, data, onSelect, compact = false }: MarketDataCardProps) {
+export default function MarketDataCard({ ticker, data, onSelect, compact = false, dataKey }: MarketDataCardProps) {
   const isPositive = (data?.changePercent ?? 0) >= 0;
+
+  // When dataKey changes (category switched), force remount by using key
+  const containerKey = dataKey ? `${dataKey}-${ticker}` : ticker;
 
   // Stable skeleton - prevents layout shift
   if (!data) {
     return (
-      <div className={`bg-white rounded-lg border border-gray-200 ${compact ? 'p-2' : 'p-4'} animate-pulse`}>
+      <div key={containerKey} className={`bg-white rounded-lg border border-gray-200 ${compact ? 'p-2' : 'p-4'} animate-pulse`}>
         <div className="flex justify-between items-start mb-2">
           <div>
             <div className="h-4 bg-gray-200 rounded w-16 mb-1"></div>
@@ -36,6 +41,7 @@ export default function MarketDataCard({ ticker, data, onSelect, compact = false
 
   return (
     <div
+      key={containerKey}
       className={`bg-white rounded-lg border border-gray-200 hover:border-blue-400 transition-all cursor-pointer ${
         isPositive ? 'hover:shadow-green-50' : 'hover:shadow-red-50'
       } ${compact ? 'p-2' : 'p-4'}`}

@@ -21,6 +21,7 @@ from app.models.schemas import (
     ArenaSeasonResponse,
     PostResponse,
 )
+from app.services.snapshots import snapshot_service
 
 router = APIRouter(prefix="/api/arena", tags=["arena"])
 
@@ -84,6 +85,9 @@ def get_arena_overview(db: Session = Depends(get_db)):
         # Exposure = (NAV - cash) / NAV
         exposure = (nav - account.balance) / nav if nav > 0 else 0.0
 
+        # Period return (7-day rolling) from nav_snapshots
+        period_return, _ = snapshot_service.calculate_period_return(agent.id)
+
         leaderboard_entries.append(
             ArenaLeaderboardEntry(
                 agent_id=agent.id,
@@ -91,6 +95,7 @@ def get_arena_overview(db: Session = Depends(get_db)):
                 strategy="",  # No hardcoded strategy - agents define their own style
                 nav=nav,
                 cumulative_return=cumulative_return,
+                period_return=period_return,
                 max_drawdown=0.0,  # Not tracked in current subsystem
                 sharpe_like=0.0,   # Not tracked in current subsystem
                 thesis_score=0.0,  # Not tracked in current subsystem
@@ -196,4 +201,31 @@ def get_arena_agent(agent_id: str, db: Session = Depends(get_db)):
             "exposure": exposure,
         },
         "positions": positions_data,
+    }
+
+
+@router.get("/agents/{agent_id}/nav-history")
+def get_agent_nav_history(agent_id: str, days: int = 30, db: Session = Depends(get_db)):
+    """Get NAV history for an agent over the past N days.
+
+    Returns daily NAV snapshots for charting.
+    """
+    # Verify agent exists
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    # Get NAV history
+    nav_history = snapshot_service.get_nav_history(agent_id, days)
+
+    return {
+        "agent_id": agent_id,
+        "agent_name": agent.name,
+        "history": [
+            {
+                "date": snap.date.isoformat() if hasattr(snap.date, 'isoformat') else str(snap.date),
+                "nav": snap.nav,
+            }
+            for snap in nav_history
+        ],
     }

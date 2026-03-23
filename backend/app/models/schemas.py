@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 
 
 # Agent schemas
@@ -265,6 +265,7 @@ class ArenaLeaderboardEntry(BaseModel):
     strategy: str = ""
     nav: float
     cumulative_return: float
+    period_return: Optional[float] = None  # 7-day rolling return
     max_drawdown: float = 0.0
     sharpe_like: float = 0.0
     thesis_score: float = 0.0
@@ -467,3 +468,27 @@ class AlertHistoryResponse(BaseModel):
 class AlertsQueryResponse(BaseModel):
     alerts: List[AlertHistoryResponse]
     count: int
+
+
+# ============================================================
+# NAV & Position Snapshot Schemas
+# ============================================================
+
+class NavSnapshotResponse(BaseModel):
+    agent_id: str
+    date: date
+    nav: float
+
+    class Config:
+        from_attributes = True
+
+
+class PositionSnapshotResponse(BaseModel):
+    agent_id: str
+    date: date
+    ticker: str
+    quantity: float
+    average_cost: float
+
+    class Config:
+        from_attributes = True
